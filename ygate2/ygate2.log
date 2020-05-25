@@ -1,6 +1,0 @@
-2020-05-25 10:55:46,630 [ERR ] [Errno 2] could not open port /dev/tty.usbserial-14110: [Errno 2] No such file or directory: '/dev/tty.usbserial-14110'
-2020-05-25 10:55:46,631 [TOUT] timeout or start login - 
-2020-05-25 10:55:55,112 [LGIN] b'# aprsc 2.1.5-g8af3cdc\r\n' b'# logresp DU1KG-2 verified, server T2LUBLIN\r\n'
-2020-05-25 10:55:55,114 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
-2020-05-25 10:55:55,218 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
-2020-05-25 10:56:08,787 {'is_rcvd': 0, 'ser_rcvd': 0, 'gated': 1, 'not gated': 0, 'invalid': 0, 'msg_sent': 0, 'msg_sack': 0, 'msg_rcvd': 0, 'calls': ['DU1KG']}
