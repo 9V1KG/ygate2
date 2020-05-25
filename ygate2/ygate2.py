@@ -3,7 +3,7 @@
 
     9V1KG Klaus D Goepel -
     https://klsin.bpmsg.com
-    https://github.com/9V1KG/Igate-n
+    https://github.com/9V1KG/ygate2
 
     Version 2 first commit 2020-05-25
 """
@@ -285,11 +285,11 @@ def mic_e_decode(route: str, m_i: bytes) -> str:
 
 class Ygate2:
     """
-    Yaesu IGate2 class takes packets sent from Yaesu radio via
+    Yaesu YGate2 class takes packets sent from Yaesu radio via
     serial (data) interface and forwards them to the APRS
     Internet system (APRS-IS)
     """
-
+    # todo: use json file for config parameter?
     RANGE = 150  # Range filter for APRS-IS in km
     SERIAL = "/dev/tty.usbserial-14110"
     BAUD = 9600  # Baud rate of the Yaesu radio
@@ -343,6 +343,7 @@ class Ygate2:
         }
         self.start_datetime = datetime.datetime.now()
         self.msg_id: int = 0
+        self.is_rx = True  # receive from Internet is on
 
     def _aprs_con(self) -> bool:
         """
@@ -374,7 +375,8 @@ class Ygate2:
         logging.info("[LGIN] %s %s", resp1, resp2)
         if resp2.find(b"# logresp") >= 0 and resp2.find(b" verified") > 0:
             # put into inputs list once logged in!
-            if self._client not in self._inputs:
+            if self.is_rx and self._client not in self._inputs:
+                logging.info("Internet connected to receive (inuts)")
                 self._inputs.append(self._client)
             return True
         print(flg_str)  # login not successful
@@ -573,6 +575,7 @@ class Ygate2:
         ack_a = re.search(r"ack([0-9]{2})", msg)
         if ack_c:  # acknowledge message received: send ack
             logging.info("[MSG ] Message received from %s", call_to)
+            # todo: store received msg in file or list
             self.p_stat["msg_rcvd"] += 1
             seq = ack_c.group(1)
             aprs_str = f"{self.user.my_call}-{self.user.ssid}>" \
@@ -602,6 +605,7 @@ class Ygate2:
         """
         q_c = re.compile(r",(qA[CIOSRUoX]),")
         q_constr = ""
+        own = False
         if len(packet) < 3 or packet.find(b":") < 0:
             logging.info("[ERR ] packet parse: %s", packet)
             self._queue_list[sys.stdout] = b"[ERR ] parse: " + packet
@@ -614,7 +618,7 @@ class Ygate2:
         routing: str = a_p1[1]
         payload: str = a_p2[1]  # non ascii chars will be shown as\xnn
         data_type = self.get_data_type(payload)
-        if q_c.search(routing):
+        if q_c.search(routing):  # q construct
             q_constr = q_c.search(routing).group(1)
         if a_p1[0] > 0:  # invalid routing
             routing = f"{COL.yellow}Invalid routing{COL.end}{routing}"
@@ -623,9 +627,10 @@ class Ygate2:
         elif self.is_routing(routing):  # starts with a valid call sign"
             reason = self.check_routing(routing, payload)
             if re.match(f"{self.user.my_call}-{self.user.ssid}", routing):
+                own = True
                 routing = f"{COL.blue}{routing}{COL.end}"  # own packet
                 payload = f"{COL.blue}{payload}{COL.end}"
-            elif data_type in ["MSG ", "3PRT"]:
+            elif data_type in ["MSG ", "3PRT"]: # check addressee
                 rec = re.match(r":([0-9A-Z -]{9}):", payload)
                 if rec:
                     if rec.group(1).strip(" ") == f"{self.user.my_call}-{self.user.ssid}":
@@ -633,7 +638,7 @@ class Ygate2:
                         self._hdl_msg_rx(rx_from, payload)  # handle received message
                         recipient = COL.purple + rec.group(1) + COL.end
                         payload = recipient + payload[10:]
-            if reason == "" and q_constr == "":
+            if reason == "" and q_constr == "" and not own:
                 # gate message to the internet
                 self._do_gating(routing, b_p2)
                 routing = f"{COL.green}{routing}{COL.end}"
@@ -644,10 +649,8 @@ class Ygate2:
         packet = bytes(f"[{data_type}] {routing}:{payload}", "utf-8")
         self._queue_list[sys.stdout] = packet
         if data_type == "MICE": # decode MIC_E packets
-            self._queue_list[sys.stdout] += b"\r\n" \
-                                            + bytes(7 * " "
-                                                   + mic_e_decode(routing, b_p2), "utf-8"
-                                                   )
+            self._queue_list[sys.stdout] \
+                += b"\r\n" + bytes(7 * " " + mic_e_decode(routing, b_p2), "utf-8")
 
     def _send_my_position(self):
         """
@@ -661,6 +664,27 @@ class Ygate2:
         if self._client not in self._outputs:
             self._outputs.append(self._client)
 
+    def tgl_isrx(self):
+        sw_on = f"{COL.green}ON{COL.end}"
+        sw_off = f"{COL.red}OFF{COL.end}"
+        prmpt = f"APRS-IS rx is {sw_on}, switch off (y/n)? " \
+            if self.is_rx else f"APRS-IS rx is {sw_off}, switch on (y/n)? "
+        sw = input(prmpt)
+        if sw.upper().startswith("Y"):
+            self.is_rx = not self.is_rx
+        if self.is_rx:
+            self._inputs.append(self._client)
+        else:
+            self._inputs.remove(self._client)
+        self._queue_list[sys.stdout] = b"[INFO] Internet receive is switched "
+        self._queue_list[sys.stdout] \
+            += bytes(sw_on if self.is_rx else sw_off, "utf-8")
+        if isinstance(self._ser, str) and not self.is_rx:
+            self._queue_list[sys.stdout] \
+            += bytes(f"\r\n{COL.red}       No packets can be receieved, "
+                     f"no radio connected{COL.end}", "utf-8")
+
+
     @staticmethod
     def prn_hlp():
         """
@@ -669,6 +693,7 @@ class Ygate2:
         """
         hlp_txt = "\r\nCommands:\r\n" \
                   f" {COL.bold}help:{COL.end} This help text\r\n" \
+                  f" {COL.bold}isrx:{COL.end} Toggle internet receive on/off\r\n" \
                   f" {COL.bold}pos: {COL.end} Send my position\r\n" \
                   f" {COL.bold}msg: {COL.end} Send message\r\n" \
                   f" {COL.bold}que: {COL.end} Show message queue\r\n" \
@@ -714,6 +739,8 @@ class Ygate2:
         line = sys.stdin.readline()
         if line.startswith("help"):
             self.prn_hlp()
+        elif line.startswith("isrx"):
+            self.tgl_isrx()
         elif line.startswith("pos"):
             self._send_my_position()
         elif line.startswith("msg"):
@@ -722,7 +749,7 @@ class Ygate2:
             print(que)
         elif line.startswith("stat"):
             self.prn_stat()
-        elif "exit" in line:
+        elif line.startswith("exit"):
             self._close_pgm()
         else:
             self._queue_list[sys.stdout] = inv_cmd
@@ -811,7 +838,7 @@ class Ygate2:
         """
         is_ui = re.compile(r" \[.*\] <UI.*>")
         b_p1 = self._ser.read_until()
-        if b_p1 == b'\r\n' or len(b_p1) == 0:  # more than \r\n
+        if b_p1 == b'\r\n' or len(b_p1) == 0:  # \r\n
             return
         logging.debug("Ser1: %s", b_p1)
         a_p1 = decode_ascii(b_p1)  # 1st line routing
@@ -870,6 +897,8 @@ class Ygate2:
             f"{self.user.my_call}-{self.user.ssid} "
             f"IGgate started - Program Version {self._VERS[-3:]} by 9V1KG{COL.end}"
         )
+        issw = f"{COL.green}ON{COL.end}" if self.is_rx else f"{COL.red}OFF{COL.end}"
+        print(f"Receive packets from APRS-IS is {issw}")
         self.prn_hlp()
         self._dispatch_in[sys.stdin] = self._hdl_kbd  # handle keyboard input
         self._dispatch_out[sys.stdout] = self._hdl_prn  # handle print output
