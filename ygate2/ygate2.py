@@ -5,7 +5,7 @@
     https://klsin.bpmsg.com
     https://github.com/9V1KG/Igate-n
 
-    Version 2 first commit 2020-05-17
+    Version 2 first commit 2020-05-25
 """
 
 import sys
