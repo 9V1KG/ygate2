@@ -1,0 +1,8 @@
+__pycache__
+.coverage
+.idea/
+Doc/build
+coverage.txt
+ygate.ygate2.log
+
+
