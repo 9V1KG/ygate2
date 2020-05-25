@@ -62,6 +62,31 @@ APRS_DATA_TYPE = {  # data types for received payload
     ",": "TEST",  # 2C Invalid data or test data
     "{": "USER"  # 7B User-Defined APRS packet format
 }
+# Message types for MIC-E encoded frames
+MSG_TYP = {"std": 0, "cst": 1}
+MSG_ID = {
+    0: ["Emergency", "Emergency,"],
+    1: ["Priority", "Custom-6"],
+    2: ["Special", "Custom-5"],
+    3: ["Committed", "Custom-4"],
+    4: ["Returning", "Custom-3"],
+    5: ["In Service", "Custom-2"],
+    6: ["En Route", "Custom-1"],
+    7: ["Off Duty", "Custom-0"],
+}
+
+
+def b91_decode(l_str: str) -> int:
+    """
+    Decodes ASCII string base 91 to number
+    :param l_str: base 91 encoded ASCII string
+    :return: r result
+    """
+    l_len = len(l_str) - 1
+    v_int = 0
+    for i, l_chr in enumerate(l_str):
+        v_int += (ord(l_chr) - 33) * 91 ** (l_len - i)
+    return v_int
 
 
 def decode_ascii(b_str: bytes) -> tuple:
@@ -126,6 +151,131 @@ def is_internet(url: str = "http://www.google.com/", timeout: int = 30) -> bool:
         print({c_err})
         logging.warning("is_internet: %s", c_err)
         return False
+
+
+def _cnv_ch(o_chr: chr) -> chr:
+    """
+    Character decoding for MIC-E destination field
+    used in mic_e_decoding
+    :param o_chr: original char
+    :return: modified char
+    """
+    if o_chr in ["K", "L", "Z"]:  # ambiguity
+        return chr(48)
+    if ord(o_chr) > 79:
+        return chr(ord(o_chr) - 32)
+    if ord(o_chr) > 64:
+        return chr(ord(o_chr) - 17)
+    return o_chr
+
+
+def prn_mice(mice_dec: dict) -> str:
+    mice_d_str = \
+        f"Pos: {mice_dec['latitude']['deg']} {mice_dec['latitude']['min']}'{mice_dec['latitude']['dir']}, " \
+        f"{mice_dec['longitude']['deg']} {mice_dec['longitude']['min']}'{mice_dec['longitude']['dir']}, " \
+        f"{mice_dec['info']}, "
+
+    if mice_dec['ambiguity'] > 0:
+        mice_d_str += f"Ambgty: {mice_dec['ambiguity']} digits, "
+    if mice_dec['speed'] > 0:
+        mice_d_str += f"Speed: {mice_dec['speed']} km/h, "
+    if mice_dec['course'] > 0:
+        mice_d_str += f"Course: {mice_dec['course']} deg, "
+    if mice_dec['altitude'] > 0:
+        mice_d_str += f"Alt: {mice_dec['altitude']} m, "
+    # decoded += f"Status: {info}"
+    return mice_d_str
+
+
+def mic_e_decode(route: str, m_i: bytes) -> str:
+    """
+    Decodes APRS MIC-E encoded data
+    :param route: routing field
+    :param m_i: payload bytes
+    :return: str with decoded information or empty
+    """
+    decode = {
+        "symbol": "",
+        "latitude": {"deg": 0, "min": 0.0, "dir": ""},
+        "longitude": {"deg": 0, "min": 0.0, "dir": ""},
+        "info": "",
+        "altitude": 0,
+        "ambiguity": 0,
+        "speed": 0,
+        "course": 0,
+        "msg": ""
+    }
+    # Check input
+    if len(m_i) == 0 or chr(m_i[0]) not in ["'", "`"]:
+        return ""
+    m_d = re.search(r">([A-Z,\d]{6,7}),", route)  # extract destination
+    if not m_d:
+        return ""
+    m_d = m_d.group(1)
+    # Check validity of input parameters
+    if not re.search(r"[0-9A-Z]{3}[0-9L-Z]{3,4}$", m_d):
+        return ""
+    if not re.match(
+            r"[\x1c\x1d`'][&-~,\x7f][&-a][\x1c-~,\x7f]{5,}", m_i.decode("ascii")
+    ):
+        return ""
+    # Message type first three bytes destination field
+    msg_t: str = "std"
+    mbits: int = 0  # message bits (0 - 7)
+    for i in range(0, 3):
+        mbits += (4 >> i) if re.match(r"[A-K,P-Z]", m_d[i]) else 0
+    # print("Message bits: {:03b}".format(mbits))
+    if re.search(r"[A-K]", m_d[0:3]):
+        msg_t = "cst"  # custom
+    decode["info"] = MSG_ID[mbits][MSG_TYP[msg_t]]
+
+    # Lat N/S, Lon E/W and Lon Offset byte 1 to 6
+    decode["latitude"]["dir"] = "S" if re.search(r"[0-L]", m_d[3]) else "N"
+    lon_o = 0 if re.search(r"[0-L]", m_d[4]) else 100
+    decode["longitude"]["dir"] = "E" if re.search(r"[0-L]", m_d[5]) else "W"
+    decode["ambiguity"] = (len(re.findall(r"[KLZ]", m_d)))
+    # Latitude deg and min
+    lat = "".join([_cnv_ch(ch) for ch in list(m_d)])
+    decode["latitude"]["deg"] = int(lat[0:2])
+    decode["latitude"]["min"] = round(int(lat[2:4]) + int(lat[-2:]) / 100, 2)
+
+    # MIC-E Information field
+    # Longitude deg and min byte 2 to 4 info field
+    decode["longitude"]["deg"] = m_i[1] - 28 if lon_o == 0 else m_i[1] + 72
+    decode["longitude"]["deg"] = decode["longitude"]["deg"] - 80 \
+        if 189 >= decode["longitude"]["deg"] >= 180 else decode["longitude"]["deg"]
+    decode["longitude"]["deg"] = decode["longitude"]["deg"] - 190 \
+        if 199 >= decode["longitude"]["deg"] >= 190 else decode["longitude"]["deg"]
+    decode["longitude"]["min"] = m_i[2] - 88 if m_i[2] - 28 >= 60 else m_i[2] - 28
+    decode["longitude"]["min"] = round(decode["longitude"]["min"] + (m_i[3] - 28) / 100, 2)
+
+    # Speed and Course bytes 5 to 7 info field
+    decode["speed"] = (m_i[4] - 28)
+    decode["speed"] = (decode["speed"] - 80) * 10 \
+        if decode["speed"] >= 80 else decode["speed"] * 10 + int((m_i[5] - 28) / 10)
+    decode["speed"] = decode["speed"] - 800 \
+        if decode["speed"] >= 800 else decode["speed"]
+    decode["course"] = 100 * ((m_i[5] - 28) % 10) + m_i[6] - 28
+    decode["course"] = decode["course"] - 400 \
+        if decode["course"] >= 400 else decode["course"]
+
+    # Symbol bytes 8 to 9 info field
+    decode["symbol"] = chr(m_i[7]) + chr(m_i[8])
+
+    # Check for altitude or telemetry
+    alt: int = 0
+    if len(m_i) > 9:
+        decode["msg"] = decode_ascii(m_i[9:])[1]
+        # Check for altitude
+        m_alt = re.search(r".{3}}", decode["info"])
+        if m_alt:
+            decode["altitude"] = b91_decode(m_alt.group()[:3]) - 10000
+        if m_i[9] in [b"'", b"`", b'\x1d']:
+            # todo decode telemetry data
+            # "'" 5 HEX, "`" 2 HEX "\x1d" 5 binary
+            # info = "Telemetry data"
+            pass
+    return prn_mice(decode)
 
 
 class Ygate2:
@@ -215,7 +365,7 @@ class Ygate2:
         resp2 = self.client.recv(self.BUF)  # second response line
         self.queue_list[sys.stdout] = \
             b"[LGIN] \033[1;32;48m> " + resp1[:-2] + b"\033[1;37;0m\r\n" \
-            b"[LGIN] \033[1;32;48m> " + resp2[:-2] + b"\033[1;37;0m\r\n"
+                                                     b"[LGIN] \033[1;32;48m> " + resp2[:-2] + b"\033[1;37;0m\r\n"
         logging.info("[LGIN] %s %s", resp1, resp2)
         if resp2.find(b"# logresp") >= 0 and resp2.find(b" verified") > 0:
             # put into inputs list once logged in!
@@ -488,8 +638,11 @@ class Ygate2:
         logging.debug("[%s] %s %s", data_type, routing, a_p2[1])
         packet = bytes(f"[{data_type}] {routing}:{payload}", "utf-8")
         self.queue_list[sys.stdout] = packet
+        if data_type == "MICE":
+            self.queue_list[sys.stdout] += b"\r\n" \
+                                           + bytes( 7 * " "
+                + mic_e_decode(routing, b_p2), "utf-8")
         # print(f"{time.strftime('%H:%M:%S ')}[{data_type}] {routing}:{payload}")
-
 
     def _send_my_position(self):
         """
@@ -524,8 +677,8 @@ class Ygate2:
         :return:
         """
         time_on = datetime.datetime.now() - self.start_datetime
-        pck_tot = self.p_stat['is_rcvd'] + self.p_stat['ser_rcvd'] +self.p_stat['gated']
-        print(f"IGate up {time_on.days} days {round(time_on.seconds/3600, 1)} h ")
+        pck_tot = self.p_stat['is_rcvd'] + self.p_stat['ser_rcvd'] + self.p_stat['gated']
+        print(f"IGate up {time_on.days} days {round(time_on.seconds / 3600, 1)} h ")
         print("Packets: {:d} processed, ".format(pck_tot)
               + "{:d} received, ".format(self.p_stat['ser_rcvd'])
               + "{:d} gated, ".format(self.p_stat['gated'])

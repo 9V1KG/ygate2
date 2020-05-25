@@ -5,6 +5,7 @@ Yaesu APRS IGate V 2.0
 from unittest import TestCase, mock
 from unittest.mock import patch
 import ygate2
+import json
 
 
 class TestFunctions(TestCase):
@@ -47,4 +48,18 @@ class TestFunctions(TestCase):
                 f"               fox jumps over the lazy dog.\r\n"
         t_txt = ygate2.ygate2.t_wrap(txt, 15)
         self.assertEqual(t_txt, f_txt)
+
+    def test_mice_decode(self):
+        route = "DU1KG-1>Q4PWQ0,DY1P,WIDE1*,WIDE2-1,qAR,DU1KG-10:"
+        payload = b'`0V l \x1c-/`":-}435.350MHz DU1KG home 73 Klaus_%'
+        decode = ygate2.ygate2.mic_e_decode(route, payload)
+        print(decode)
+        route = ""
+        payload = b'`0V l \x1c-/`":-}435.350MHz DU1KG home 73 Klaus_%'
+        decode = ygate2.ygate2.mic_e_decode(route, payload)
+        print(decode)
+        route = "DU1KG-1>Q4PWQ0,DY1P,WIDE1*,WIDE2-1,qAR,DU1KG-10:"
+        payload = b''
+        decode = ygate2.ygate2.mic_e_decode(route, payload)
+        print(decode)
 
