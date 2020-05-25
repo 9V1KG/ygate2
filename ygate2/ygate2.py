@@ -170,15 +170,21 @@ def _cnv_ch(o_chr: chr) -> chr:
 
 
 def prn_mice(mice_dec: dict) -> str:
+    """
+    Convert json mic_e dictionary into printable string
+    :param mice_dec: decoded mic_e dictionary
+    :return: string for printing
+    """
     mice_d_str = \
-        f"Pos: {mice_dec['latitude']['deg']} {mice_dec['latitude']['min']}'{mice_dec['latitude']['dir']}, " \
-        f"{mice_dec['longitude']['deg']} {mice_dec['longitude']['min']}'{mice_dec['longitude']['dir']}, " \
+        f"Pos: {mice_dec['latitude']['deg']} " \
+        f"{mice_dec['latitude']['min']}'{mice_dec['latitude']['dir']}, " \
+        f"{mice_dec['longitude']['deg']} " \
+        f"{mice_dec['longitude']['min']}'{mice_dec['longitude']['dir']}, " \
         f"{mice_dec['info']}, "
-
     if mice_dec['ambiguity'] > 0:
         mice_d_str += f"Ambgty: {mice_dec['ambiguity']} digits, "
     if mice_dec['speed'] > 0:
-        mice_d_str += f"Speed: {mice_dec['speed']} km/h, "
+        mice_d_str += f"Speed: {mice_dec['speed']} knots, "
     if mice_dec['course'] > 0:
         mice_d_str += f"Course: {mice_dec['course']} deg, "
     if mice_dec['altitude'] > 0:
@@ -263,7 +269,6 @@ def mic_e_decode(route: str, m_i: bytes) -> str:
     decode["symbol"] = chr(m_i[7]) + chr(m_i[8])
 
     # Check for altitude or telemetry
-    alt: int = 0
     if len(m_i) > 9:
         decode["msg"] = decode_ascii(m_i[9:])[1]
         # Check for altitude
@@ -365,7 +370,7 @@ class Ygate2:
         resp2 = self.client.recv(self.BUF)  # second response line
         self.queue_list[sys.stdout] = \
             b"[LGIN] \033[1;32;48m> " + resp1[:-2] + b"\033[1;37;0m\r\n" \
-                                                     b"[LGIN] \033[1;32;48m> " + resp2[:-2] + b"\033[1;37;0m\r\n"
+            b"[LGIN] \033[1;32;48m> " + resp2[:-2] + b"\033[1;37;0m\r\n"
         logging.info("[LGIN] %s %s", resp1, resp2)
         if resp2.find(b"# logresp") >= 0 and resp2.find(b" verified") > 0:
             # put into inputs list once logged in!
@@ -536,7 +541,7 @@ class Ygate2:
             in1 = ""
             while 1 > len(in1) < 67:
                 in1 = input(
-                    "Message (67 char max):\r\n" \
+                    "Message (67 char max):\r\n"
                     ".........1.........2.........3.........4.........5.........6.......\r\n"
                 )
             message = in1
@@ -640,9 +645,9 @@ class Ygate2:
         self.queue_list[sys.stdout] = packet
         if data_type == "MICE":
             self.queue_list[sys.stdout] += b"\r\n" \
-                                           + bytes( 7 * " "
-                + mic_e_decode(routing, b_p2), "utf-8")
-        # print(f"{time.strftime('%H:%M:%S ')}[{data_type}] {routing}:{payload}")
+                                           + bytes(7 * " "
+                                                   + mic_e_decode(routing, b_p2), "utf-8"
+                                                   )
 
     def _send_my_position(self):
         """
