@@ -291,31 +291,31 @@ class Ygate2:
     """
 
     RANGE = 150  # Range filter for APRS-IS in km
-    # SERIAL = "/dev/tty.usbserial-D21JZ1X2"
     SERIAL = "/dev/tty.usbserial-14110"
     BAUD = 9600  # Baud rate of the Yaesu radio
     BCNTXT = "Testing Yaesu IGate 2.0 program - 73"
     STATUS_TXT = "IGate is up - RF-IS for FTM-400: https://github.com/9V1KG/Ygate2"
     HOST = "rotate.aprs2.net"
     PORT = 14580
-    BUF = 512
-    HOURLY = 3600.0
     BEACON = 1200.0  # beacon every 20 min
-    FORMAT = "ascii"  # APRS uses ASCII
-    VERS = "APZ200"  # Software experimental vers 2.00
     SPECIAL_CALLS = ["USNAP1", "PSAT", "PCSAT", "AISAT", "WXYO", "WXBOT"]
     LOG_FILE = "ygate2.log"
-    MSG_RETRY = 5
 
-    client = ""
-    ser = ""
-    queue_list = {}
+    _BUF = 512
+    _HOURLY = 3600.0
+    _MSG_RETRY = 5
+    _FORMAT = "ascii"  # APRS uses ASCII
+    _VERS = "APZ200"  # Software experimental vers 2.00
+
     ack_list = {"send": []}  # msg_id as str!
-    inputs = [sys.stdin]  # Sockets from which we expect to read
-    outputs = [sys.stdout]  # Sockets to which we expect to write
-    dispatch_in = {}
-    dispatch_out = {}
-    dispatch_exceptions = {}  # todo: check, if really necessary
+    _client = ""
+    _ser = ""
+    _queue_list = {}
+    _inputs = [sys.stdin]  # Sockets from which we expect to read
+    _outputs = [sys.stdout]  # Sockets to which we expect to write
+    _dispatch_in = {}
+    _dispatch_out = {}
+    _dispatch_exceptions = {}  # todo: check, if really necessary
 
     def __init__(self):
         logging.basicConfig(  # logging
@@ -350,32 +350,32 @@ class Ygate2:
         :return: True or False depending on the success.
         """
         lgi_str = f"user {self.user.my_call}-{self.user.ssid} pass {self.user.secret} " \
-                  f"vers 9V1KG-ygate {self.VERS[-3:]} filter m/{self.RANGE}\r\n"
+                  f"vers 9V1KG-ygate {self._VERS[-3:]} filter m/{self.RANGE}\r\n"
         flg_str = f"{COL.red}Login not successful. Check call sign and verification code.{COL.end}"
         fcn_str = f"{COL.yellow}Cannot connect to APRS server{COL.end}"
 
-        if self.client is not isinstance(self.client, classmethod):
-            self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
+        if self._client is not isinstance(self._client, classmethod):
+            self._client = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
             # Update dispatch list with new socket
-            self.dispatch_in[self.client] = self._hdl_aprs_rx
-            self.dispatch_out[self.client] = self._hdl_aprs_tx
+            self._dispatch_in[self._client] = self._hdl_aprs_rx
+            self._dispatch_out[self._client] = self._hdl_aprs_tx
         try:
-            self.client.connect((self.HOST, self.PORT))
+            self._client.connect((self.HOST, self.PORT))
         except (OSError, TimeoutError) as msg:
             print(f"{fcn_str}: {msg}")
             return False
         time.sleep(0.5)
-        self.client.sendall(bytes(lgi_str, "utf-8"))  # Login
-        resp1 = self.client.recv(self.BUF)  # first response line
-        resp2 = self.client.recv(self.BUF)  # second response line
-        self.queue_list[sys.stdout] = \
+        self._client.sendall(bytes(lgi_str, "utf-8"))  # Login
+        resp1 = self._client.recv(self._BUF)  # first response line
+        resp2 = self._client.recv(self._BUF)  # second response line
+        self._queue_list[sys.stdout] = \
             b"[LGIN] \033[1;32;48m> " + resp1[:-2] + b"\033[1;37;0m\r\n" \
             b"[LGIN] \033[1;32;48m> " + resp2[:-2] + b"\033[1;37;0m\r\n"
         logging.info("[LGIN] %s %s", resp1, resp2)
         if resp2.find(b"# logresp") >= 0 and resp2.find(b" verified") > 0:
             # put into inputs list once logged in!
-            if self.client not in self.inputs:
-                self.inputs.append(self.client)
+            if self._client not in self._inputs:
+                self._inputs.append(self._client)
             return True
         print(flg_str)  # login not successful
         return False
@@ -386,7 +386,7 @@ class Ygate2:
         :return: True when serial could be opened
         """
         try:
-            self.ser = serial.Serial(
+            self._ser = serial.Serial(
                 port=self.SERIAL,
                 baudrate=self.BAUD,
                 timeout=1
@@ -397,7 +397,7 @@ class Ygate2:
                   )
             logging.warning("[ERR ] %s", str(err))
             return False
-        print(" " * 9 + f"Serial port {self.ser.name} opened")
+        print(" " * 9 + f"Serial port {self._ser.name} opened")
         return True
 
     @staticmethod
@@ -455,7 +455,7 @@ class Ygate2:
                 self.SPECIAL_CALLS.append(rx_from)
                 logging.info("Special call: %s added", rx_from)
                 info = f"[INFO] Special call {rx_from} added"
-                self.queue_list[sys.stdout] = bytes(info, "utf-8")
+                self._queue_list[sys.stdout] = bytes(info, "utf-8")
         return rx_from
 
     def check_routing(self, route: str, payld: str) -> str:
@@ -492,9 +492,9 @@ class Ygate2:
         # add ",qAO,mycall-ssid:"
         route = route + f",qAO,{self.user.my_call}-{self.user.ssid}:"
         packet = bytes(route, "ascii") + payld
-        self.queue_list[self.client] = packet  # put into output queue
-        if self.client not in self.outputs:
-            self.outputs.append(self.client)
+        self._queue_list[self._client] = packet  # put into output queue
+        if self._client not in self._outputs:
+            self._outputs.append(self._client)
         self.p_stat["gated"] += 1
 
     def _hdl_msg_tx(self, m_id: str):
@@ -520,12 +520,12 @@ class Ygate2:
             self.p_stat["msg_sent"] += 1
             return
         logging.info("[MSG ] Id %s Retry %i", m_id, retry)
-        wait = 25. + (self.MSG_RETRY - retry) * 20
+        wait = 25. + (self._MSG_RETRY - retry) * 20
         threading.Timer(wait, self._hdl_msg_tx, (m_id,)).start()
         self.ack_list["send"][index - 1] = retry - 1
-        self.queue_list[self.client] = bytes(aprs_str, "ascii")
-        if self.client not in self.outputs:
-            self.outputs.append(self.client)
+        self._queue_list[self._client] = bytes(aprs_str, "ascii")
+        if self._client not in self._outputs:
+            self._outputs.append(self._client)
 
     def _hdl_msg_input(self):
         """
@@ -552,11 +552,11 @@ class Ygate2:
         self.msg_id += 1 % 99
         id_str = str(format(self.msg_id, '02d'))
         aprs_str = f"{self.user.my_call}-{self.user.ssid}>" \
-                   f"{self.VERS},TCPIP*::{call_to.ljust(9)}:{message}" \
+                   f"{self._VERS},TCPIP*::{call_to.ljust(9)}:{message}" \
                    + "{" + id_str + "\r\n"
         if id_str not in self.ack_list:
             self.ack_list[id_str] = aprs_str
-            self.ack_list["send"].append(self.MSG_RETRY)
+            self.ack_list["send"].append(self._MSG_RETRY)
         self._hdl_msg_tx(id_str)
 
     def _hdl_msg_rx(self, call_to: str, pay_ld: str):
@@ -576,11 +576,11 @@ class Ygate2:
             self.p_stat["msg_rcvd"] += 1
             seq = ack_c.group(1)
             aprs_str = f"{self.user.my_call}-{self.user.ssid}>" \
-                       f"{self.VERS},TCPIP*::{call_to.ljust(9)}:ack{seq}\r\n"
+                       f"{self._VERS},TCPIP*::{call_to.ljust(9)}:ack{seq}\r\n"
             packet = bytes(aprs_str, "ascii")
-            self.queue_list[self.client] = packet
-            if self.client not in self.outputs:
-                self.outputs.append(self.client)
+            self._queue_list[self._client] = packet
+            if self._client not in self._outputs:
+                self._outputs.append(self._client)
         elif ack_a:  # received ack for msg sent
             seq = ack_a.group(1)
             if seq in self.ack_list:
@@ -590,7 +590,7 @@ class Ygate2:
                 self.p_stat["msg_sent"] += 1
                 self.p_stat["msg_sack"] += 1
                 logging.info("[MSG ] Message %s was acknowledged!", seq)
-                self.queue_list[sys.stdout] = \
+                self._queue_list[sys.stdout] = \
                     f"[MSG ] {COL.purple}Message {seq} acknowledged!{COL.end}\r\n"
 
     def packet_parse(self, packet: bytes):
@@ -604,7 +604,7 @@ class Ygate2:
         q_constr = ""
         if len(packet) < 3 or packet.find(b":") < 0:
             logging.info("[ERR ] packet parse: %s", packet)
-            self.queue_list[sys.stdout] = b"[ERR ] parse: " + packet
+            self._queue_list[sys.stdout] = b"[ERR ] parse: " + packet
             return  # disregard
         a_p1 = decode_ascii(packet.split(b":", 1)[0])
         b_p2 = packet.split(b":", 1)[1]
@@ -642,10 +642,10 @@ class Ygate2:
                 routing = f"{COL.yellow}{reason}{COL.end}: {routing}"
         logging.debug("[%s] %s %s", data_type, routing, a_p2[1])
         packet = bytes(f"[{data_type}] {routing}:{payload}", "utf-8")
-        self.queue_list[sys.stdout] = packet
-        if data_type == "MICE":
-            self.queue_list[sys.stdout] += b"\r\n" \
-                                           + bytes(7 * " "
+        self._queue_list[sys.stdout] = packet
+        if data_type == "MICE": # decode MIC_E packets
+            self._queue_list[sys.stdout] += b"\r\n" \
+                                            + bytes(7 * " "
                                                    + mic_e_decode(routing, b_p2), "utf-8"
                                                    )
 
@@ -653,13 +653,13 @@ class Ygate2:
         """
         thread that sends position every BEACON sec to APRS IS
         """
-        pos_c = bytes(f"{self.user.my_call}-{self.user.ssid}>{self.VERS},"
+        pos_c = bytes(f"{self.user.my_call}-{self.user.ssid}>{self._VERS},"
                       f"TCPIP*:=/GATAm'8^#JHt {self.BCNTXT}\r\n", "utf-8"
                       )
         threading.Timer(self.BEACON, self._send_my_position).start()
-        self.queue_list[self.client] = pos_c  # put into output queue
-        if self.client not in self.outputs:
-            self.outputs.append(self.client)
+        self._queue_list[self._client] = pos_c  # put into output queue
+        if self._client not in self._outputs:
+            self._outputs.append(self._client)
 
     @staticmethod
     def prn_hlp():
@@ -725,7 +725,7 @@ class Ygate2:
         elif "exit" in line:
             self._close_pgm()
         else:
-            self.queue_list[sys.stdout] = inv_cmd
+            self._queue_list[sys.stdout] = inv_cmd
 
     def _hdl_prn(self):
         """
@@ -733,13 +733,13 @@ class Ygate2:
         and indent output
         :return: None
         """
-        if not self.queue_list or sys.stdout not in self.queue_list:
+        if not self._queue_list or sys.stdout not in self._queue_list:
             return
         try:
-            b_txt = self.queue_list[sys.stdout]
+            b_txt = self._queue_list[sys.stdout]
         except KeyError:
             # todo: check, whether exception is really necessary
-            logging.debug("KeyError in hdl_prn %s", self.queue_list)
+            logging.debug("KeyError in hdl_prn %s", self._queue_list)
             return
         text = decode_ascii(b_txt)
         lines = text[1].split("\r\n")
@@ -747,7 +747,7 @@ class Ygate2:
             if len(line) > 0:
                 t_out = time.strftime("%H:%M:%S ") + t_wrap(line, INDENT)
                 sys.stdout.write(t_out)
-        del self.queue_list[sys.stdout]  # delete from queue
+        del self._queue_list[sys.stdout]  # delete from queue
 
     def _hdl_timeout(self):
         """
@@ -757,14 +757,14 @@ class Ygate2:
         """
         retry = 120.  # wait 2 min before trying to reconnect
         # todo: needs more extensive testing
-        logging.warning("[TOUT] timeout or start login - %s", self.client)
+        logging.warning("[TOUT] timeout or start login - %s", self._client)
         if is_internet():
             if self._aprs_con():
                 self._send_my_position()
                 return
         else:
             b_txt = bytes(f"{COL.yellow}No Internet ...{COL.end}", "utf-8")
-            self.queue_list[sys.stdout] = b_txt
+            self._queue_list[sys.stdout] = b_txt
             threading.Timer(retry, self._hdl_timeout).start()
 
     def _hdl_aprs_rx(self):
@@ -774,10 +774,10 @@ class Ygate2:
         :return: None
         """
         try:
-            buf = self.client.recv(self.BUF)
+            buf = self._client.recv(self._BUF)
             logging.debug("APRS buf: %s", buf)
         except (TimeoutError, OSError) as err:
-            self.queue_list[sys.stdout] = \
+            self._queue_list[sys.stdout] = \
                 bytes(f"{COL.yellow}Error reading from APRS-IS{COL.end}:"
                       f" {err}\r\n", "utf-8")
             self._hdl_timeout()  # try to reconnect
@@ -791,17 +791,17 @@ class Ygate2:
         Handler for sending data to APRS-IS
         :return: None
         """
-        b_to_send = self.queue_list[self.client]
+        b_to_send = self._queue_list[self._client]
         try:
-            self.client.sendall(b_to_send)
+            self._client.sendall(b_to_send)
         except (TimeoutError, OSError) as err:
             # todo: error handling
             print(f"{COL.yellow}Error writing to APRS-IS"
                   f"{COL.end}: {err}", "utf-8")
             self._hdl_timeout()  # try to reconnect
         logging.info("[TX  ] %s", b_to_send)
-        del self.queue_list[self.client]  # delete from queue
-        self.outputs.remove(self.client)
+        del self._queue_list[self._client]  # delete from queue
+        self._outputs.remove(self._client)
         self.packet_parse(b_to_send)
 
     def _hdl_ser_rx(self):
@@ -810,14 +810,14 @@ class Ygate2:
         :return:
         """
         is_ui = re.compile(r" \[.*\] <UI.*>")
-        b_p1 = self.ser.read_until()
+        b_p1 = self._ser.read_until()
         if b_p1 == b'\r\n' or len(b_p1) == 0:  # more than \r\n
             return
         logging.debug("Ser1: %s", b_p1)
         a_p1 = decode_ascii(b_p1)  # 1st line routing
         if is_ui.search(a_p1[1]):
             b_p1 = bytes(is_ui.sub("", a_p1[1].strip()), "ascii")
-            b_p2 = self.ser.read_until()  # 2nd line payload bytes
+            b_p2 = self._ser.read_until()  # 2nd line payload bytes
             logging.debug("Ser2: %s", b_p2)
         else:  # out of sync, disregard payload
             logging.info("[SER ] out of sync: %s", b_p1)
@@ -833,7 +833,7 @@ class Ygate2:
         :return: None
         """
         # todo: should be removed later
-        print("Default readable: ", self.inputs, self.queue_list)
+        print("Default readable: ", self._inputs, self._queue_list)
 
     def _hdl_def_t(self):
         """
@@ -842,7 +842,7 @@ class Ygate2:
         :return:
         """
         # todo: should be removed later
-        print("Default writable: ", self.outputs, self.queue_list)
+        print("Default writable: ", self._outputs, self._queue_list)
 
     def _hdl_exc_aprs(self):
         """
@@ -868,12 +868,12 @@ class Ygate2:
         print(
             f"{COL.green}{(str(self.start_datetime).split('.'))[0]} "
             f"{self.user.my_call}-{self.user.ssid} "
-            f"IGgate started - Program Version {self.VERS[-3:]} by 9V1KG{COL.end}"
+            f"IGgate started - Program Version {self._VERS[-3:]} by 9V1KG{COL.end}"
         )
         self.prn_hlp()
-        self.dispatch_in[sys.stdin] = self._hdl_kbd  # handle keyboard input
-        self.dispatch_out[sys.stdout] = self._hdl_prn  # handle print output
-        self.dispatch_exceptions[sys.stdin] = self._hdl_kbd
+        self._dispatch_in[sys.stdin] = self._hdl_kbd  # handle keyboard input
+        self._dispatch_out[sys.stdout] = self._hdl_prn  # handle print output
+        self._dispatch_exceptions[sys.stdin] = self._hdl_kbd
 
         self._open_serial()  # open serial
         self._hdl_timeout()  # open socket and connect to aprs server
@@ -885,17 +885,17 @@ class Ygate2:
         """
         self._start_up()
         # todo: see, whether exceptions is ever reached
-        while self.inputs:
-            if not isinstance(self.ser, str):
+        while self._inputs:
+            if not isinstance(self._ser, str):
                 self._hdl_ser_rx()  # does not work with select
             readable, writable, exceptional \
-                = select.select(self.inputs, self.outputs, [])
+                = select.select(self._inputs, self._outputs, [])
             for sel in readable:
-                self.dispatch_in.get(sel, self._hdl_def_r)()
+                self._dispatch_in.get(sel, self._hdl_def_r)()
             for sel in writable:
-                self.dispatch_out.get(sel, self._hdl_def_t)()
+                self._dispatch_out.get(sel, self._hdl_def_t)()
             for sel in exceptional:
-                self.dispatch_exceptions.get(sel)()
+                self._dispatch_exceptions.get(sel)()
             time.sleep(0.1)
 
 
