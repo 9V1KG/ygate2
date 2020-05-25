@@ -4,5 +4,6 @@ __pycache__
 Doc/build
 coverage.txt
 ygate.ygate2.log
+ygate2.tests.ygate2.log
 
 

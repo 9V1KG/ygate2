@@ -2,7 +2,7 @@
 
 Ygate2 is an APRS Internet gate working with Yaesu radios.
 This version is an improved version based on my previous first version Igate-n with
-additional features.
+additional features. More features to follow.
 (c) 9V1KG
 
 The script will turn your Yaesu radio (FT1D, FTM-100, FTM-400) into a receive-only

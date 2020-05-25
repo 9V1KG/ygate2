@@ -15,3 +15,118 @@
 2020-05-25 12:42:10,001 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
 2020-05-25 13:02:09,815 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
 2020-05-25 13:02:09,920 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 13:06:20,792 [ERR ] [Errno 2] could not open port /dev/tty.usbserial-14110: [Errno 2] No such file or directory: '/dev/tty.usbserial-14110'
+2020-05-25 13:06:20,792 [TOUT] timeout or start login - 
+2020-05-25 13:06:23,413 [LGIN] b'# aprsc 2.1.4-g408ed49\r\n' b'# logresp DU1KG-2 verified, server T2MEXICO\r\n'
+2020-05-25 13:06:23,415 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 13:06:23,521 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 13:26:23,474 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 13:26:23,583 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 13:46:23,434 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 13:46:23,538 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 14:06:23,421 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 14:06:23,529 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 14:26:23,418 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 14:26:23,529 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 14:46:23,441 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 14:46:23,552 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:06:23,414 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:06:23,524 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:17:20,159 [ERR ] packet parse: b''
+2020-05-25 15:17:20,161 [ERR ] packet parse: b'# aprsc 2.1.4-g408'
+2020-05-25 15:32:04,851 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:32:04,955 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:52:04,828 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:52:04,933 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 15:57:48,581 [MSG ] Id 01 Retry 5
+2020-05-25 15:57:48,687 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :Test message{01\r\n'
+2020-05-25 15:57:48,791 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :Test message{01\r\n'
+2020-05-25 15:58:13,586 [MSG ] Id 01 Retry 4
+2020-05-25 15:58:13,683 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :Test message{01\r\n'
+2020-05-25 15:58:13,786 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :Test message{01\r\n'
+2020-05-25 15:58:58,588 [MSG ] Id 01 Retry 3
+2020-05-25 15:58:58,663 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :Test message{01\r\n'
+2020-05-25 15:58:58,768 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :Test message{01\r\n'
+2020-05-25 16:00:03,589 [MSG ] Id 01 Retry 2
+2020-05-25 16:00:03,673 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :Test message{01\r\n'
+2020-05-25 16:00:03,779 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :Test message{01\r\n'
+2020-05-25 16:01:28,593 [MSG ] Id 01 Retry 1
+2020-05-25 16:01:28,678 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :Test message{01\r\n'
+2020-05-25 16:01:28,779 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :Test message{01\r\n'
+2020-05-25 16:12:04,809 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 16:12:04,919 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 16:13:16,633 [MSG ] Id 02 Retry 5
+2020-05-25 16:13:16,740 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:13:16,844 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:13:41,637 [MSG ] Id 02 Retry 4
+2020-05-25 16:13:41,725 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:13:41,829 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:14:26,640 [MSG ] Id 02 Retry 3
+2020-05-25 16:14:26,696 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:14:26,798 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:15:31,644 [MSG ] Id 02 Retry 2
+2020-05-25 16:15:31,724 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:15:31,826 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :test no 2{02\r\n'
+2020-05-25 16:15:31,935 [MSG ] Message received from DU1KG-1
+2020-05-25 16:15:32,036 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :ack64\r\n'
+2020-05-25 16:15:32,139 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :ack64\r\n'
+2020-05-25 16:15:38,015 [MSG ] Message 02 was acknowledged!
+2020-05-25 16:16:42,030 [MSG ] Message received from DU1KG-1
+2020-05-25 16:16:42,131 [TX  ] b'DU1KG-2>APZ200,TCPIP*::DU1KG-1  :ack64\r\n'
+2020-05-25 16:16:42,236 [TX  ] b'\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2::DU1KG-1  :ack64\r\n'
+2020-05-25 16:32:04,843 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 16:32:04,949 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 16:52:04,822 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 16:52:04,928 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:12:04,831 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:12:04,935 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:32:04,804 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:32:04,910 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:52:04,748 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:52:04,855 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:55:36,089 {'is_rcvd': 1128, 'ser_rcvd': 0, 'gated': 26, 'not gated': 0, 'invalid': 0, 'msg_sent': 2, 'msg_sack': 1, 'msg_rcvd': 2, 'calls': ['DU1KG', 'DV3CEP', 'DU1OC', 'DV1OZR', 'DW3EBG', 'DW1VVZ', '4I1EBD', '4I1AYZ', 'DY1P']}
+2020-05-25 17:55:43,696 [ERR ] [Errno 2] could not open port /dev/tty.usbserial-14110: [Errno 2] No such file or directory: '/dev/tty.usbserial-14110'
+2020-05-25 17:55:43,697 [TOUT] timeout or start login - 
+2020-05-25 17:55:45,513 [LGIN] b'# aprsc 2.1.5-g8af3cdc\r\n' b'# logresp DU1KG-2 verified, server T2NUERNBG\r\n'
+2020-05-25 17:55:45,515 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 17:55:45,624 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:13:04,664 [ERR ] [Errno 2] could not open port /dev/tty.usbserial-14110: [Errno 2] No such file or directory: '/dev/tty.usbserial-14110'
+2020-05-25 18:13:04,665 [TOUT] timeout or start login - 
+2020-05-25 18:13:08,984 [LGIN] b'# aprsc 2.1.4-g408ed49\r\n' b'# logresp DU1KG-2 verified, server T2CSNGRAD\r\n'
+2020-05-25 18:13:08,985 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:13:09,088 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:33:09,078 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:33:09,184 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:37:08,656 {'is_rcvd': 92, 'ser_rcvd': 0, 'gated': 2, 'not gated': 0, 'invalid': 0, 'msg_sent': 0, 'msg_sack': 0, 'msg_rcvd': 0, 'calls': ['DU1KG', '4I1AYZ', 'DU1OC', 'DW3EBG', 'DY1P', 'DV3CEP', 'DV1OZR', '4I1EBD']}
+2020-05-25 18:38:31,865 [ERR ] [Errno 2] could not open port /dev/tty.usbserial-14110: [Errno 2] No such file or directory: '/dev/tty.usbserial-14110'
+2020-05-25 18:38:31,865 [TOUT] timeout or start login - 
+2020-05-25 18:38:34,892 [LGIN] b'# aprsc 2.1.5-g8af3cdc\r\n' b'# logresp DU1KG-2 verified, server T2HUN\r\n'
+2020-05-25 18:38:34,893 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:38:35,000 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:40:16,657 {'is_rcvd': 8, 'ser_rcvd': 0, 'gated': 1, 'not gated': 0, 'invalid': 0, 'msg_sent': 0, 'msg_sack': 0, 'msg_rcvd': 0, 'calls': ['DU1KG', 'DW3EBG', 'DU1OC']}
+2020-05-25 18:40:21,453 [ERR ] [Errno 2] could not open port /dev/tty.usbserial-14110: [Errno 2] No such file or directory: '/dev/tty.usbserial-14110'
+2020-05-25 18:40:21,454 [TOUT] timeout or start login - 
+2020-05-25 18:40:23,631 [LGIN] b'# aprsc 2.1.4-g408ed49\r\n' b'# logresp DU1KG-2 verified, server T2CSNGRAD\r\n'
+2020-05-25 18:40:23,632 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 18:40:23,736 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 19:00:23,626 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 19:00:23,734 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 19:20:23,622 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 19:20:23,728 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 19:40:23,604 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 19:40:23,711 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:00:23,658 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:00:23,766 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:06:33,784 [TOUT] timeout or start login - <socket.socket fd=7, family=AddressFamily.AF_INET, type=SocketKind.SOCK_STREAM, proto=6, laddr=('192.168.254.144', 60812)>
+2020-05-25 20:06:35,547 [LGIN] b'# aprsc 2.1.4-g408ed49\r\n' b'# logresp DU1KG-2 verified, server T2VAN\r\n'
+2020-05-25 20:06:54,205 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:06:55,195 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:20:34,295 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:20:38,791 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:27:05,892 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:27:14,343 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:40:54,292 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:41:14,334 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:47:05,054 [TX  ] b"DU1KG-2>APZ200,TCPIP*:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:47:14,291 [TX  ] b"\x1b[1;34;48mDU1KG-2>APZ200,TCPIP*\x1b[1;37;0m,qAO,DU1KG-2:=/GATAm'8^#JHt Testing Yaesu IGate 2.0 program - 73\r\n"
+2020-05-25 20:53:14,386 {'is_rcvd': 420, 'ser_rcvd': 0, 'gated': 10, 'not gated': 0, 'invalid': 0, 'msg_sent': 0, 'msg_sack': 0, 'msg_rcvd': 0, 'calls': ['DU1KG', '4I1AYZ', 'DY1P', 'DV3CEP', 'DV1OZR', 'DW3EBG', '4I1EBD', 'DU1OC', 'DW1VVZ', 'DV1XWK']}

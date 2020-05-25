@@ -1,6 +1,6 @@
 from setuptools import setup
 
-requirements = "requests", "pyserial"
+requirements = "pyserial", "requests", "pylint"
 setup(
     name="ygate2",
     version="2.0a0",

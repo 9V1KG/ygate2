@@ -5,6 +5,7 @@ Yaesu APRS IGate
 from unittest import TestCase, mock
 from unittest.mock import patch
 from ygate2 import Ygate2
+import re
 
 
 class TestYgate2(TestCase):
@@ -34,4 +35,25 @@ class TestYgate2(TestCase):
         print(d_typ)
         self.assertEqual(d_typ, "MICE")
 
+    def test_is_routing(self):
 
+        test_true = [
+            "4I1AYZ-10>APWW11,WIDE1-1,qAR,4I1AYZ-11::BLN0     :Stay at home.\r\n"
+            "DU1KG-10>APZ200,TCPIP*:=/GATAm'8^#JHt Testing \r\n"
+            "USNAP1>APOS00,ARISS::OFF"
+        ]
+        test_false = [
+            "4I?AYZ-10>APWW11,WIDE1-1,qAR,4I1AYZ-11::BLN0     :Stay at home. \r\n"
+            "DUKG-10>APZ200,TCPIP*:=/GATAm'8^#JHt Testing \r\n"
+            "USNAP-1>APOS00,ARISS::OFF\r\n"
+        ]
+        call = re.compile(r"\d?[A-Z]{1,2}\d{1,4}[A-Z]{1,4}")
+        for tst in test_true:
+            cs = call.match(tst)
+            res = self.lcl_ygate2.is_routing(tst)
+            self.assertEqual(res, True, msg=res)
+            self.assertIn(cs.group(), self.lcl_ygate2.p_stat["calls"])
+        for tst in test_false:
+            print(tst)
+            res = self.lcl_ygate2.is_routing(tst)
+            self.assertEqual(res, False, msg=res)
