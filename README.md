@@ -78,6 +78,7 @@ Stop the program with `exit`.
 ## Runtime Commands
 
     help: This help text
+    isrx: Toggle internet receive on/off
     pos:  Send my position
     msg:  Send message
     que:  Show message queue
