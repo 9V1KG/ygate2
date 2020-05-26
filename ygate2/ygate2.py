@@ -522,7 +522,7 @@ class Ygate2:
             self.p_stat["msg_sent"] += 1
             return
         logging.info("[MSG ] Id %s Retry %i", m_id, retry)
-        wait = 25. + (self._MSG_RETRY - retry) * 20
+        wait = 60. + (self._MSG_RETRY - retry) * 30
         threading.Timer(wait, self._hdl_msg_tx, (m_id,)).start()
         self.ack_list["send"][index - 1] = retry - 1
         self._queue_list[self._client] = bytes(aprs_str, "ascii")
@@ -627,8 +627,8 @@ class Ygate2:
         elif self.is_routing(routing):  # starts with a valid call sign"
             reason = self.check_routing(routing, payload)
             if re.match(f"{self.user.my_call}-{self.user.ssid}", routing):
-                own = True
-                routing = f"{COL.blue}{routing}{COL.end}"  # own packet
+                own = True  # own packet
+                routing = f"{COL.blue}{routing}{COL.end}"
                 payload = f"{COL.blue}{payload}{COL.end}"
             elif data_type in ["MSG ", "3PRT"]: # check addressee
                 rec = re.match(r":([0-9A-Z -]{9}):", payload)
@@ -676,6 +676,7 @@ class Ygate2:
             self._inputs.append(self._client)
         else:
             self._inputs.remove(self._client)
+        logging.info("Internet receive is %s", self.is_rx)
         self._queue_list[sys.stdout] = b"[INFO] Internet receive is switched "
         self._queue_list[sys.stdout] \
             += bytes(sw_on if self.is_rx else sw_off, "utf-8")
