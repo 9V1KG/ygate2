@@ -606,14 +606,16 @@ class Ygate2:
         q_c = re.compile(r",(qA[CIOSRUoX]),")
         q_constr = ""
         own = False
-        if len(packet) < 3 or packet.find(b":") < 0:
+        if len(packet) < 3 or b":" not in packet:
             logging.info("[ERR ] packet parse: %s", packet)
-            self._queue_list[sys.stdout] = b"[ERR ] parse: " + packet
+            # self._queue_list[sys.stdout] = b"[ERR ] parse: " + packet
             return  # disregard
         a_p1 = decode_ascii(packet.split(b":", 1)[0])
         b_p2 = packet.split(b":", 1)[1]
         a_p2 = decode_ascii(b_p2)
-        if a_p1[1][0] == "#":  # APRS server comments
+        logging.debug("parse a_p1: %s", a_p1)
+        logging.debug("parse a_p2: %s", a_p2)
+        if len(a_p1[1]) == 0 or a_p1[1][0] == "#":  # APRS server comments
             return  # disregard
         routing: str = a_p1[1]
         payload: str = a_p2[1]  # non ascii chars will be shown as\xnn
@@ -665,16 +667,22 @@ class Ygate2:
             self._outputs.append(self._client)
 
     def tgl_isrx(self):
+        """
+        Toggle between receiving from APRS server on/off
+        :return:
+        """
         sw_on = f"{COL.green}ON{COL.end}"
         sw_off = f"{COL.red}OFF{COL.end}"
         prmpt = f"APRS-IS rx is {sw_on}, switch off (y/n)? " \
             if self.is_rx else f"APRS-IS rx is {sw_off}, switch on (y/n)? "
-        sw = input(prmpt)
-        if sw.upper().startswith("Y"):
+        if input(prmpt).upper().startswith("Y"):
             self.is_rx = not self.is_rx
         if self.is_rx:
+            self._client.recv(self._BUF)  #make buffer empty
             self._inputs.append(self._client)
         else:
+            if self._client in self._queue_list:
+                del self._queue_list[self._client]
             self._inputs.remove(self._client)
         logging.info("Internet receive is %s", self.is_rx)
         self._queue_list[sys.stdout] = b"[INFO] Internet receive is switched "
@@ -682,7 +690,7 @@ class Ygate2:
             += bytes(sw_on if self.is_rx else sw_off, "utf-8")
         if isinstance(self._ser, str) and not self.is_rx:
             self._queue_list[sys.stdout] \
-            += bytes(f"\r\n{COL.red}       No packets can be receieved, "
+            += bytes(f"\r\n{COL.red}       No packets can be received, "
                      f"no radio connected{COL.end}", "utf-8")
 
 
@@ -810,6 +818,8 @@ class Ygate2:
                       f" {err}\r\n", "utf-8")
             self._hdl_timeout()  # try to reconnect
             return
+        if buf.startswith(b"#"):  # disregard aprs-is comments
+            return
         for packet in buf.splitlines():
             self.packet_parse(packet)
             self.p_stat["is_rcvd"] += 1
@@ -899,7 +909,7 @@ class Ygate2:
             f"IGgate started - Program Version {self._VERS[-3:]} by 9V1KG{COL.end}"
         )
         issw = f"{COL.green}ON{COL.end}" if self.is_rx else f"{COL.red}OFF{COL.end}"
-        print(f"Receive packets from APRS-IS is {issw}")
+        print(f"Receive packets from APRS-IS is {issw}, toggle with \"isrx\"")
         self.prn_hlp()
         self._dispatch_in[sys.stdin] = self._hdl_kbd  # handle keyboard input
         self._dispatch_out[sys.stdout] = self._hdl_prn  # handle print output

@@ -74,6 +74,16 @@ Start the program from the command line window in your directory with:
     python3 ygate2.py
 
 Stop the program with `exit`.
+### Install as Python module
+    git clone https://github.com/9V1KG/ygate2.git
+    cd ygate2
+    # create and activate virtual environment
+    python3 -m venv venv
+    source venv/bin/activate
+    python setup.py install
+    # python setup.py install --user (Raspi)
+    # run Ygate2
+    python3 -m ygate2
 
 ## Runtime Commands
 
