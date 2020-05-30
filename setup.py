@@ -4,7 +4,7 @@ requirements = "pyserial", "requests", "pylint"
 setup(
     name="ygate2",
     version="2.0a0",
-    packages=["ygate2"],
+    packages=["ygate2", "aprsutils", "kiss"],
     url="https://github.com/9V1KG/ygate2",
     license="Please check with author",
     author="9V1KG",
@@ -21,5 +21,5 @@ setup(
             'black',
             'pylint'
         ]},
-    description="Maidenhead locator functions",
+    description="IGate V2.0 for Yaesu radio",
 )
