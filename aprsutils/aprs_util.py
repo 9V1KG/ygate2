@@ -8,7 +8,7 @@ import math
 import logging
 import requests
 
-WRAP = 120
+WRAP = 110
 INDENT = 16
 
 APRS_DATA_TYPE = {  # data types for received payload

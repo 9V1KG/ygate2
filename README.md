@@ -18,6 +18,7 @@ It should run on Windows too.
 - Checks and recovers from lost network/internet connection
 - Interactive terminal input during runtime
 - NEW: allows to send and receive messages via APRS-IS
+- NEW: kiss interface to direwolf 
 - Beacon of your position and altitude in compressed format
 - Statistics showing up-time, processed packets and unique call signs
 - Checks packet payload decoding and highlight invalid bytes
@@ -30,25 +31,34 @@ Please modify the following parameter in `ygate2.py` according
 to your requirements:
 ### User settings
 
-     parameter to set:
-     self.user = User(
-            my_call="MYCALL",
-            ssid=10,
-            secret=00000,
-            pos=((14, 7.09, "N"), (120, 58.07, "E"), (570, "m"))
-        )
+     Parameter to set:
+        "mycall": "MYCALL",
+        "ssid": 10,
+        "secret": 00000,
+        "pos": {
+            "lat": (14, 7.09, "N"),
+            "lon": (120, 58.07, "E"),
+            "alt": (0, "m"),
+        },
+        "filter": 150,  # range in km
+        "beacon": "Testing Yaesu IGate 2.0 program - 73",
+        "status": "IGate is up - RF-IS for FTM-400: https://github.com/9V1KG/Ygate2",
+        "serial": ("/dev/tty.usbserial-14110", 9600),
+        "aprsis": ("rotate.aprs2.net", 14580),
 
- - `my_call=`:   your call sign, e.g. DU1KG
+ - `mycall=`:   your call sign, e.g. DU1KG
  - `ssid=`:      ssid for the gateway (default 10)
  - `secret=`:    your APRS 5-digit pass code
  - `pos=` (Latitude, Longitude, Altitude):
  - Latitude and longitude in the format
- `(degrees, minutes as decimal number, N/S/E/W)`. 
-Altitude in meter `"m"` or feet `"ft"`, e.g. `(0.,"m")` if none
-### Constants
+ `(degrees, minutes as decimal number, N/S/E/W)`.
+ Altitude in meter `"m"` or feet `"ft"`, e.g. `(0.,"m")` if none
+ - `filter` Filter range to receive from APRS-IS in km 
+ - `serial`: Serial driver and baud ("/dev/ttyUSB0")
+ - `aprsis`: APRS server address
+ 
      
-    RANGE:  Filter range in km (default 150) 
-    SERIAL: Serial driver (default "/dev/ttyUSB0")
+    
 
 ## Radio Setup FTM-400
     Setup -> APRS -> (5) APRS Modem -> ON
@@ -62,16 +72,11 @@ Altitude in meter `"m"` or feet `"ft"`, e.g. `(0.,"m")` if none
 
 ## Install and Run
 
-For a simple installation as python script, copy the file `ygaten.py` into your directory 
-and make it executable.
-Modify the parameter as explained above. Import `pySerial` and `requests` with:
-
-    pip install pySerial
-    pip install requests
-
+Modify the parameter as explained above.
 Start the program from the command line window in your directory with: 
 
-    python3 ygate2.py
+    cd ygate2
+    python3 -m ygate2
 
 Stop the program with `exit`.
 ### Install as Python module

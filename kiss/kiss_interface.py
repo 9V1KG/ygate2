@@ -195,7 +195,8 @@ class KissInterface:
         route = ""
         for i in self._chunk7(frame[16:pid_pos]):
             route += self._decode_call(i) + ","
-        b_msg = frame[pid_pos + 2:-1]
+        b_msg = bytearray(frame[pid_pos + 2:-1])
+        # todo TESC TFEND
         # todo: return packet as dict?
         packet = bytes(f"{source}>{dest},{route[:-1]}:", "ascii") + b_msg
         return packet
