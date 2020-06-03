@@ -1,5 +1,5 @@
 """
-Module with utilities and functions for APRS decoding/encoding
+Module with constants and functions for APRS decoding/encoding
 Author: Klaus D Goepel, 9V1KG
 """
 import textwrap
@@ -199,11 +199,10 @@ def prn_mice(mice_dec: dict) -> str:
     return mice_d_str
 
 
-def mic_e_decode(route: str, m_i: bytes) -> str:
+def mic_e_decode(packet: dict) -> str:
     """
     Decodes APRS MIC-E encoded data
-    :param route: routing field
-    :param m_i: payload bytes
+    :param packet: packet as dictionary
     :return: str with decoded information or empty
     """
     decode = {
@@ -217,13 +216,8 @@ def mic_e_decode(route: str, m_i: bytes) -> str:
         "course": 0,
         "msg": ""
     }
-    # Check input
-    if len(m_i) == 0 or chr(m_i[0]) not in ["'", "`"]:
-        return ""
-    m_d = re.search(r">([A-Z,\d]{6,7}),", route)  # extract destination
-    if not m_d:
-        return ""
-    m_d = m_d.group(1)
+    m_i = packet["payload"]
+    m_d = packet['dest']
     # Check validity of input parameters
     if not re.search(r"[0-9A-Z]{3}[0-9L-Z]{3,4}$", m_d):
         return ""
@@ -340,6 +334,98 @@ def t_wrap(text: str, indent: int) -> str:
     return txt
 
 
+def check_routing(packet: dict) -> str:
+    """
+    Check whether the packet should be routed to the internet.
+    Packets with q constructs will not be routed when parsed
+    :param packet: decoded packet dictionary
+    :return: "" if ok for routing, reason otherwise
+    """
+    _, payld = decode_ascii(packet["payload"])
+    if len(payld) == 0:
+        reason = "No Payload, not gated"
+    elif re.search(r"^}.*,TCP.*:", payld):
+        reason = "Third party not gated"
+    elif re.match(r"\?", payld):
+        reason = "Query, not gated"
+    elif "RFONLY" in packet["path"]:
+        reason = "RFONLY, not gated"
+    elif "NOGATE" in packet["path"]:
+        reason = "NOGATE, not gated"
+    elif packet["source"] == "DTMF":
+        reason = "DTMF, not gated"
+    else:
+        return ""
+    return reason
+
+
+def packet_parse(packet: bytes) -> dict:
+    """
+    Converts packet bytes into dictionary with keys:
+    source, destination, path, q_constr, dta_id, payload
+    :param packet: packet byte string
+    :return: decoded packet as dictionary or {} if error
+    """
+    pck = {
+        "source": "",  # source call sign
+        "dest": "",  # destination call sign
+        "path": [],  # path list
+        "q_constr": "", # q construct
+        "dta_id": "",  # aprs data id
+        "payload": b"",  # payload (bytes)
+        "info": ""  # used for parsing to add information
+    }
+    cl = re.compile(r"[A-Zq0-9\*]{3,8}(-[A-Z0-9]{1,2})?")  # call sign
+    q_c = re.compile(r"qA[CIOSRUoX]")  # q construct
+    d_id = re.compile(r"[!=@/`':}T#\*_\$;)?<>,\{]")  # data id
+    non_asc, a_packet = decode_ascii(packet)
+    if not (">" in a_packet and ":" in a_packet and "," in a_packet) \
+            or len(packet) < 12:  # invalid packet
+        pck["info"] = "Invalid packet"
+        return pck
+    b_route, b_pld = packet.split(b":", 1)
+    non_asc, route = decode_ascii(b_route)
+    if non_asc > 0:  # routing has to be ascii, invalid
+        pck["info"] = "Invalid routing"
+        return pck
+    non_asc, a_pld = decode_ascii(b_pld)
+    p_parts = route.split(">")
+    if cl.match(p_parts[0]):
+        pck["source"] = cl.match(p_parts[0]).group()
+    else:
+        pck["info"] = "Invalid source"
+        return pck  # invalid source
+    p_dp = p_parts[1].split(",")
+    dst = p_dp.pop(0)
+    pck["dest"] = cl.match(dst).group() \
+        if cl.match(dst) else ""
+    pck["path"] = p_dp
+    pck["q_constr"] = "".join([q_c.match(p_el).group() for p_el in pck["path"]
+                               if q_c.match(p_el)])
+    id = a_pld[0]
+    pck["dta_id"] = id if d_id.findall(id) else ""
+    pck["payload"] = b_pld
+    return pck
+
+
+def packet_prn(pck: dict, col: str = "") -> str:
+    """
+    Returns printable packet string from packet in color if given
+    :param pck: packet dict
+    :param col: color for info
+    :return: printable string
+    """
+    inv_byt, pld = decode_ascii(pck['payload'][1:])
+    prn = col
+    info = pck["info"]
+    if info != "":
+        prn += col
+        prn += f"{info}: "
+    prn += f"{pck['source']}>{pck['dest']}," \
+           f"{','.join(pck['path'])}:{pck['dta_id']}{pld}\033[1;37;0m"
+    return prn
+
+
 def is_internet(url: str = "http://www.google.com/", timeout: int = 30) -> bool:
     """
     Is there an internet connection
@@ -352,14 +438,10 @@ def is_internet(url: str = "http://www.google.com/", timeout: int = 30) -> bool:
         # HTTP errors are not raised by default, this statement does that
         req.raise_for_status()
         return True
-    except requests.HTTPError as h_err:
-        print(
-            f"\033[1;31;48mInternet connection failed: "
-            f"{h_err.response.status_code}\033[1;37;0m"
+    except (requests.exceptions.ConnectionError,
+            requests.RequestException, requests.HTTPError) as h_err:
+        print(9 * " " + "[WRN ]" +
+              f"\033[1;31;48m Internet connection failed\033[1;37;0m"
         )
-        logging.warning("is_internet: %s", h_err.response.status_code)
-        return False
-    except requests.exceptions.ConnectionError as c_err:
-        print({c_err})
-        logging.warning("is_internet: %s", c_err)
+        logging.warning("is_internet: %s", h_err)
         return False

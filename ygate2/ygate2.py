@@ -57,7 +57,7 @@ class Ygate2:
     _HOURLY = 3600.0
     _MSG_RETRY = 5
     _FORMAT = "ascii"  # APRS uses ASCII
-    _VERS = "APZ200"  # Software experimental vers 2.00
+    _VERS = "APZ207"  # Software experimental vers 2.07 (dev #7)
 
     _ack_list = {"send": []}  # msg_id as str!
     _client = None  # socket for aprs TCP connection
@@ -75,7 +75,6 @@ class Ygate2:
             level=logging.INFO,
             format='%(asctime)s %(message)s'
         )
-
         self.p_stat = {  # statistics
             "is_rcvd": 0,  # received from internet
             "ser_rcvd": 0,  # received from the radio
@@ -109,7 +108,10 @@ class Ygate2:
         fcn_str = f"{self.COL.yellow}Cannot connect to APRS server{self.COL.end}"
 
         if self._client is not isinstance(self._client, classmethod):
+            logging.info("[ERR ] APRS connection lost: fn: %s", self._aprs_fn)
             if self._aprs_fn != 0:
+                if self._aprs_fn in self._inputs:
+                    self._inputs.remove(self._aprs_fn)
                 del self._dispatch_in[self._aprs_fn]
                 del self._dispatch_out[self._aprs_fn]
             self._client = socket.socket(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP)
@@ -120,6 +122,7 @@ class Ygate2:
         try:
             self._client.connect(self.CONFIG["aprsis"])
         except (OSError, TimeoutError) as msg:
+            logging.info("[LGIN] aprs_con: OSError, TimeoutError %s", msg)
             print(f"{fcn_str}: {msg}")
             return False
         time.sleep(0.5)
@@ -133,7 +136,8 @@ class Ygate2:
         if resp2.find(b"# logresp") >= 0 and resp2.find(b" verified") > 0:
             # put into inputs list once logged in!
             if self.is_rx and self._aprs_fn not in self._inputs:
-                logging.info("Internet connected to receive (inputs)")
+                logging.info("[INFO] Internet connected to receive (fn: %s)",
+                             self._aprs_fn)
                 self._inputs.append(self._aprs_fn)
             return True
         if resp1.find(b"# Port full"):
@@ -170,10 +174,10 @@ class Ygate2:
                 timeout=1
             )  # timeout necessary no to block rest of pgm
         except (serial.SerialException, serial.SerialTimeoutException) as err:
-            print(" " * 9 + aprs.t_wrap(f"{self.COL.red}Serial interface: Check connection "
-                                        f"and driver name. Error {str(err)}{self.COL.end}", 9)
-                  )
-            logging.warning("[ERR ] %s", str(err))
+            # print(" " * 9 + aprs.t_wrap(f"{self.COL.red}Serial interface: Check connection "
+            #                            f"and driver name. Error {str(err)}{self.COL.end}", 9)
+            #      )
+            logging.warning("[WRN ] %s", str(err))
             return False
         self._ser_fn = self._ser.fileno()
         self._dispatch_in[self._ser.fileno()] = self._hdl_ser_rx  # handle kiss input
@@ -181,70 +185,7 @@ class Ygate2:
         print(" " * 9 + f"Serial port {self._ser.name} opened")
         return True
 
-    def is_routing(self, p_str: str) -> bool:
-        """
-        Check whether p_str is a valid routing packet, add unique call signs to list
-        of received call signs.
-        :param p_str: String to be checked
-        :return: true if valid p_str starts with a valid call sign
-        """
-        # check for normal calls
-        val_call = re.match(r"\d?[A-Z]{1,2}\d{1,4}[A-Z]{1,4}", p_str)
-        if val_call:
-            if val_call.group() not in self.p_stat["calls"]:
-                self.p_stat["calls"].append(val_call.group())
-            return True
-        # check for possible aliases/special calls
-        val_call = re.match(r"([A-Z\d]{4,7})(-\d{1,2})?", p_str)
-        if val_call and val_call.group(1) in self.SPECIAL_CALLS:
-            if val_call.group() not in self.p_stat["calls"]:
-                self.p_stat["calls"].append(val_call.group())
-            return True
-        return False
-
-    def get_call_from(self, routing):
-        """
-        Returns source call sign from the routing part of the packet.
-        :param routing:
-        :return: call sign found
-        """
-        f_c = re.compile(r":?((\d?[A-Z]{1,2}\d{1,4}[A-Z]{1,4})-?\d{0,2}) {0,6}[>:]?")
-        if f_c.match(routing):  # full call match
-            rx_from = f_c.match(routing).group(1)  # call
-        else:  # special call or service?
-            sp_c = re.match(r"([A-Z\d]{4,7})(-\d{1,2})?", routing)
-            rx_from = sp_c.group(1)
-            if rx_from not in self.SPECIAL_CALLS:
-                self.SPECIAL_CALLS.append(rx_from)
-                logging.info("Special call: %s added", rx_from)
-                info = f"[INFO] Special call {rx_from} added"
-                self._queue_list[sys.stdout.fileno()] = bytes(info, "utf-8")
-        return rx_from
-
-    def check_routing(self, route: str, payld: str) -> str:
-        """
-        Check whether the packet should be routed to the internet.
-        Packets with q constructs will not be routed when parsed
-        :param route: routing
-        :param payld: payload
-        :return: "" if ok for routing, reason otherwise
-        """
-        if len(payld) == 0:
-            reason = "No Payload, not gated"
-        elif re.search(r"^}.*,TCP.*:", payld):
-            reason = "Third party not gated"
-        elif re.match(r"\?", payld):
-            reason = "Query, not gated"
-        elif "RFONLY" in route:
-            reason = "RFONLY, not gated"
-        elif "NOGATE" in route:
-            reason = "NOGATE, not gated"
-        else:
-            return ""
-        self.p_stat["not gated"] += 1
-        return reason
-
-    def _do_gating(self, route: str, payld: bytes):
+    def _do_gating(self, packet: dict):
         """
         Forwards received packet to the internet. q construct and own
         call added.
@@ -253,9 +194,10 @@ class Ygate2:
         :return:
         """
         # add ",qAO,mycall-ssid:"
-        route = route + f",qAO,{self._user}:"
-        packet = bytes(route, "ascii") + payld
-        self._queue_list[self._aprs_fn] = packet  # put into output queue
+        packet["path"].append("qAO")
+        packet["path"].append(self._user)
+        p_str = bytes(aprs.packet_prn(packet), "ascii")
+        self._queue_list[self._aprs_fn] = p_str  # put into output queue
         if self._aprs_fn not in self._outputs:
             self._outputs.append(self._aprs_fn)
         self.p_stat["gated"] += 1
@@ -294,6 +236,7 @@ class Ygate2:
         self._queue_list[out_fn] = bytes(aprs_str, "ascii")
         if out_fn not in self._outputs:
             self._outputs.append(out_fn)
+        self.packet_parse(bytes(aprs_str, "ascii"))
 
     def _hdl_msg_input(self):
         """
@@ -325,7 +268,7 @@ class Ygate2:
         id_str = str(format(self.msg_id, '02d'))
         routing = f"{self._user}>{self._VERS},"
         routing += "WIDE1-1, WIDE2-1:" \
-            if self.kiss.kiss_fn != 0 else f"TCPIP*:"
+            if self.kiss.kiss_fn != 0 else "TCPIP*:"
         payload = f":{call_to.ljust(9)}:{message}"
         retry = 1  # no ack expected
         if not call_to.startswith("BLN"):
@@ -352,7 +295,6 @@ class Ygate2:
         ack_a = re.search(r"ack([0-9]{2})", msg)
         if ack_c:  # acknowledge message received: send ack
             logging.info("[MSG ] Message received from %s", call_to)
-            # todo: store received msg in file or list
             self.p_stat["msg_rcvd"] += 1
             self._msg_list[strftime("%Y-%m-%d %H:%M:%S", localtime())] \
                 = [call_to, pay_ld]
@@ -378,64 +320,6 @@ class Ygate2:
                 self._queue_list[sys.stdout.fileno()] = \
                     f"[MSG ] {self.COL.purple}Message {seq} acknowledged!{self.COL.end}\r\n"
 
-    def packet_parse(self, packet: bytes):
-        """
-        Parse packets received, check validity, determine data type, and
-        whether it should be gated to the internet. Gating is called from here.
-        :param packet: bytes with packet received
-        :return:
-        """
-        q_c = re.compile(r",(qA[CIOSRUoX]),")
-        q_constr = ""
-        own = False
-        if len(packet) < 3 or b":" not in packet:
-            logging.info("[ERR ] packet parse: %s", packet)
-            # self._queue_list[sys.stdout.fileno()] = b"[ERR ] parse: " + packet
-            return  # disregard
-        a_p1 = aprs.decode_ascii(packet.split(b":", 1)[0])
-        b_p2 = packet.split(b":", 1)[1]
-        a_p2 = aprs.decode_ascii(b_p2)
-        logging.debug("parse a_p1: %s", a_p1)
-        logging.debug("parse a_p2: %s", a_p2)
-        if len(a_p1[1]) == 0 or a_p1[1][0] == "#":  # APRS server comments
-            return  # disregard
-        routing: str = a_p1[1]
-        payload: str = a_p2[1]  # non ascii chars will be shown as\xnn
-        data_type = aprs.get_data_type(payload)
-        if q_c.search(routing):  # q construct
-            q_constr = q_c.search(routing).group(1)
-        if a_p1[0] > 0:  # invalid routing
-            routing = f"{self.COL.yellow}Invalid routing{self.COL.end}{routing}"
-            logging.warning("[INV ] Invalid routing: %s%s", routing, payload)
-            self.p_stat["invalid"] += 1
-        elif self.is_routing(routing):  # starts with a valid call sign"
-            reason = self.check_routing(routing, payload)
-            if re.match(f"{self._user}", routing):
-                own = True  # own packet
-                routing = f"{self.COL.blue}{routing}{self.COL.end}"
-                payload = f"{self.COL.blue}{payload}{self.COL.end}"
-            elif data_type in ["MSG ", "3PRT"]:  # check addressee
-                rec = re.match(r":([0-9A-Z -]{9}):", payload)
-                if rec:
-                    if rec.group(1).strip(" ") == f"{self._user}":
-                        rx_from = self.get_call_from(routing)
-                        self._hdl_msg_rx(rx_from, payload)  # handle received message
-                        recipient = self.COL.purple + rec.group(1) + self.COL.end
-                        payload = recipient + payload[10:]
-            if reason == "" and q_constr == "" and not own:
-                # gate message to the internet
-                self._do_gating(routing, b_p2)
-                routing = f"{self.COL.green}{routing}{self.COL.end}"
-                payload = f"{self.COL.green}{payload}{self.COL.end}"
-            elif reason != "":
-                routing = f"{self.COL.yellow}{reason}{self.COL.end}: {routing}"
-        logging.debug("[%s] %s %s", data_type, routing, a_p2[1])
-        packet = bytes(f"[{data_type}] {routing}:{payload}", "utf-8")
-        self._queue_list[sys.stdout.fileno()] = packet
-        if data_type == "MICE":  # decode MIC_E packets
-            self._queue_list[sys.stdout.fileno()] \
-                += b"\r\n" + bytes(7 * " " + aprs.mic_e_decode(routing, b_p2), "utf-8")
-
     def _send_my_position(self):
         """
         thread that sends position every BEACON sec to APRS IS
@@ -450,31 +334,55 @@ class Ygate2:
         # send t APRS-IS
         if self._aprs_fn not in self._outputs:
             self._outputs.append(self._aprs_fn)
+        self.packet_parse(bytes(position_string, "ascii"))
 
-    def _tgl_isrx(self):
+    def packet_parse(self, packet: bytes):
         """
-        Toggle between receiving from APRS server on/off
+        Parse packets received, check validity, determine data type, and
+        whether it should be gated to the internet. Gating is called from here.
+        Handle messages received to own call
+        :param packet: bytes with packet received
         :return:
         """
-        sw_prn = self.red_green(self.is_rx)
-        prmpt = f"APRS-IS rx is {sw_prn}, switch off (y/n)?"
-        if not input(prmpt).upper().startswith("Y"):
+        if packet == {}:
+            logging.info("packet_parse: Empty packet")
             return
-        self.is_rx = not self.is_rx
-        if self.is_rx:
-            self._client.recv(self._BUF)  # make buffer empty
-            self._inputs.append(self._aprs_fn)
-        else:
-            if self._aprs_fn in self._queue_list:
-                del self._queue_list[self._aprs_fn]
-            self._inputs.remove(self._aprs_fn)
-        logging.info("Internet receive is %s", self.is_rx)
-        p_prn = f"[INFO] Internet receive is switched {self.red_green(self.is_rx)}."
-        self._queue_list[sys.stdout.fileno()] = bytes(p_prn, "utf-8")
-        if self.kiss.kiss_fn == 0 and self._ser_fn == 0 and not self.is_rx:
+        p_dec = aprs.packet_parse(packet)
+        _, payload = aprs.decode_ascii(p_dec["payload"])
+        data_type = aprs.get_data_type(p_dec["dta_id"])
+        aprs_str = aprs.packet_prn(p_dec)
+        own = False
+        if p_dec["payload"] == "":
+            logging.debug("packet parse: empty payload")
+            return
+        if p_dec["source"] == self._user:
+            own = True  # own packet, print in blue
+            aprs_str = aprs.packet_prn(p_dec, self.COL.blue)
+        else:  # put into list of unique call signs
+            # todo take out ssid
+            if p_dec["source"] not in self.p_stat["calls"]:
+                self.p_stat["calls"].append(p_dec["source"])
+        if data_type in ["MSG ", "3PRT"]:
+            rec = re.match(r":([0-9A-Z -]{9}):", payload)
+            if rec: # check for own call and handle received message
+                if rec.group(1).strip(" ") == f"{self._user}":
+                    self._hdl_msg_rx(p_dec["source"], payload)
+                    aprs_str = aprs.packet_prn(p_dec, self.COL.purple)
+        reason = aprs.check_routing(p_dec)
+        if reason == "" and p_dec["q_constr"] == "" and not own:
+            # gate message to the internet
+            self._do_gating(p_dec)
+            aprs_str = aprs.packet_prn(p_dec, self.COL.green)
+        if reason != "":
+            p_dec["info"] = reason
+            self.p_stat["not gated"] += 1
+            aprs_str = aprs.packet_prn(p_dec, self.COL.yellow)
+        logging.debug("[%s] %s", data_type, aprs_str)
+        pck = bytes(f"[{data_type}] {aprs_str}", "utf-8")
+        self._queue_list[sys.stdout.fileno()] = pck
+        if data_type == "MICE":  # decode MIC_E packets
             self._queue_list[sys.stdout.fileno()] \
-                += bytes(f"\r\n{self.COL.red}       No packets can be received, "
-                         f"no radio connected{self.COL.end}", "utf-8")
+               += b"\r\n" + bytes(7 * " " + aprs.mic_e_decode(p_dec), "utf-8")
 
     def prn_hlp(self):
         """
@@ -520,23 +428,53 @@ class Ygate2:
             )[0]
         )
 
-    def red_green(self, var) -> str:
+    def prn_io(self):
+        """
+        Print IO status of interfaces
+        :return:
+        """
+        print(9 * " " +
+              f"I/O: APRS-IS: {self._red_green(self._aprs_fn)}"
+              f" APRS-IS RX: {self._red_green(self.is_rx)}"
+              f" Serial: {self._red_green(self._ser_fn)}"
+              f" KISS: {self._red_green(self.kiss.kiss_fn)}"
+              )
+
+    def _red_green(self, var) -> str:
+        """
+        ON (green) for var true, OFF (red) otherwise
+        :param var: bool or int
+        :return:
+        """
         var = int(var)
         p_var = self.COL.red + "OFF" if var == 0 else self.COL.green + "ON"
         p_var += self.COL.end
         return p_var
 
-    def prn_io(self):
-        aprs_pno = f"{self.COL.red}{self._aprs_fn}{COL.end}" \
-            if self._aprs_fn == 0 else \
-            f"{self.COL.green}{self._aprs_fn}{self.COL.end}"
-        print(9 * " " +
-                        f"IO:"
-                        f" APRS-IS: {self.red_green(self._aprs_fn)}"
-                        f" APRS-IS RX: {self.red_green(self.is_rx)}"
-                        f" Serial: {self.red_green(self._ser_fn)}"
-                        f" KISS: {self.red_green(self.kiss.kiss_fn)}"
-                        )
+    def _tgl_isrx(self):
+        """
+        Toggle between receiving from APRS server on/off
+        :return:
+        """
+        sw_prn = self._red_green(self.is_rx)
+        prmpt = f"APRS-IS rx is {sw_prn}, switch off (y/n)?"
+        if not input(prmpt).upper().startswith("Y"):
+            return
+        self.is_rx = not self.is_rx
+        if self.is_rx:
+            self._client.recv(self._BUF)  # make buffer empty
+            self._inputs.append(self._aprs_fn)
+        else:
+            if self._aprs_fn in self._queue_list:
+                del self._queue_list[self._aprs_fn]
+            self._inputs.remove(self._aprs_fn)
+        logging.info("Internet receive is %s", self.is_rx)
+        # p_prn = f"[INFO] Internet receive is switched {self.red_green(self.is_rx)}."
+        self.prn_io()
+        if self.kiss.kiss_fn == 0 and self._ser_fn == 0 and not self.is_rx:
+            self._queue_list[sys.stdout.fileno()] \
+               = bytes(f"\r\n{self.COL.red}       No packets can be received, "
+                        f"no radio connected{self.COL.end}", "utf-8")
 
     def _hdl_kbd(self):
         """
@@ -602,7 +540,6 @@ class Ygate2:
         :return:
         """
         retry = 120.  # wait 2 min before trying to reconnect
-        # todo: needs more extensive testing
         logging.warning("[TOUT] timeout or start login - fn: %s", self._aprs_fn)
         # todo remove fn
         if aprs.is_internet():
@@ -610,7 +547,7 @@ class Ygate2:
                 self._send_my_position()
                 return
         else:
-            b_txt = bytes(f"{self.COL.yellow}No Internet ...{self.COL.end}", "utf-8")
+            b_txt = bytes(f"{self.COL.yellow}Trying to reconnect ...{self.COL.end}", "utf-8")
             self._queue_list[sys.stdout.fileno()] = b_txt
             threading.Timer(retry, self._hdl_timeout).start()
 
@@ -643,7 +580,7 @@ class Ygate2:
         b_to_send = self._queue_list[self._aprs_fn]
         try:
             self._client.sendall(b_to_send)
-        except (TimeoutError, OSError) as err:
+        except (TimeoutError, BrokenPipeError, OSError) as err:
             # todo: error handling
             print(f"{self.COL.yellow}Error writing to APRS-IS"
                   f"{self.COL.end}: {err}", "utf-8")
@@ -651,7 +588,6 @@ class Ygate2:
         logging.info("[TX  ] %s", b_to_send)
         del self._queue_list[self._aprs_fn]  # delete from queue
         self._outputs.remove(self._aprs_fn)
-        self.packet_parse(b_to_send)
 
     def _hdl_ser_rx(self):
         """
@@ -705,6 +641,7 @@ class Ygate2:
             logging.info("[WRN ] Kiss modem disconnected")
             self._queue_list[sys.stdout.fileno()] = \
                 bytes(f"[WRN ] {self.COL.yellow}Kiss modem disconnected{self.COL.end}", "utf-8")
+            return
         logging.info("[KISS] %s", packet)
         self.packet_parse(packet)
 
@@ -733,7 +670,7 @@ class Ygate2:
         )
         issw = f"{self.COL.green}ON{self.COL.end}" \
             if self.is_rx else f"{self.COL.red}OFF{self.COL.end}"
-        print(f"Receive packets from APRS-IS is {issw}, toggle with \"isrx\"")
+        print(" " * 9 + f"Receive packets from APRS-IS is {issw}, toggle with \"isrx\"")
 
         pos_c = aprs.compress_position(self.CONFIG["pos"]["lat"],
                                        self.CONFIG["pos"]["lon"],
