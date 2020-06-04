@@ -57,7 +57,7 @@ class Ygate2:
     _HOURLY = 3600.0
     _MSG_RETRY = 5
     _FORMAT = "ascii"  # APRS uses ASCII
-    _VERS = "APZ207"  # Software experimental vers 2.07 (dev #7)
+    _VERS = "APZ208"  # Software experimental vers 2.07 (dev #7)
 
     _ack_list = {"send": []}  # msg_id as str!
     _client = None  # socket for aprs TCP connection
@@ -328,13 +328,36 @@ class Ygate2:
                                        self.CONFIG["pos"]["lon"],
                                        self.CONFIG["pos"]["alt"])
         position_string = f"{self._user}" \
-                          f">{self._VERS},TCPIP*:={pos_c}{self.CONFIG['beacon']}\n"
+                          f">{self._VERS},TCPIP*:={pos_c}{self.CONFIG['beacon']}\r\n"
         threading.Timer(self.BEACON, self._send_my_position).start()
         self._queue_list[self._aprs_fn] = bytes(position_string, "ascii")
         # send t APRS-IS
         if self._aprs_fn not in self._outputs:
             self._outputs.append(self._aprs_fn)
         self.packet_parse(bytes(position_string, "ascii"))
+
+    def _send_status(self):
+        """
+        thread that sends a bulletin every HOURLY sec to APRS IS
+        """
+        if self.p_stat["ser_rcvd"] > 0:
+            # send statistics via bulletin
+            time_on = datetime.datetime.now() - self.start_datetime
+            p_tot = self.p_stat["ser_rcvd"] + self.p_stat["gated"] + self.p_stat["not gated"]
+            n_calls = len(self.p_stat["calls"])
+            status_txt = f"IGate up {time_on.days} days " \
+                f"{round(time_on.seconds/3600,1)} h " \
+                f"{p_tot} rcvd, {self.p_stat['gated']} gtd, " \
+                f"{n_calls} unique calls"
+        else:
+            status_txt = self.CONFIG["status"]
+        status = f"{self._user}>{self._VERS}," \
+                   f"TCPIP*:>{status_txt}\r\n"
+        threading.Timer(self._HOURLY, self._send_status).start()
+        self._queue_list[self._aprs_fn] = bytes(status, "ascii")
+        if self._aprs_fn not in self._outputs:
+            self._outputs.append(self._aprs_fn)
+        self.packet_parse(bytes(status, "ascii"))
 
     def packet_parse(self, packet: bytes):
         """
@@ -688,6 +711,7 @@ class Ygate2:
         self._kiss_con()  # open kiss modem
         self._hdl_timeout()  # open socket and connect to aprs server
         self.prn_io()
+        self._send_status()
 
     def main(self):
         """
