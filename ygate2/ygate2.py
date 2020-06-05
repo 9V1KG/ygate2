@@ -57,7 +57,7 @@ class Ygate2:
     _HOURLY = 3600.0
     _MSG_RETRY = 5
     _FORMAT = "ascii"  # APRS uses ASCII
-    _VERS = "APZ208"  # Software experimental vers 2.07 (dev #7)
+    _VERS = "APZ209"  # Software experimental vers 2.07 (dev #7)
 
     _ack_list = {"send": []}  # msg_id as str!
     _client = None  # socket for aprs TCP connection
@@ -65,7 +65,7 @@ class Ygate2:
     _queue_list = {}  # queue to store file no: and bytes to send/receive
     _msg_list = {}  # store messages received and sent
     _inputs = [sys.stdin.fileno()]  # Sockets from which we expect to read
-    _outputs = [sys.stdout.fileno()]  # Sockets to which we expect to write
+    _outputs = [] # Sockets to which we expect to write
     _dispatch_in = {}  # file no and functions to execute receiving
     _dispatch_out = {}  # file no and functions to execute sending
 
@@ -129,9 +129,9 @@ class Ygate2:
         self._client.sendall(bytes(lgi_str, "utf-8"))  # Login
         resp1 = self._client.recv(self._BUF)  # first response line
         resp2 = self._client.recv(self._BUF)  # second response line
-        response = f"{self.COL.green}{resp1[:-2]}{self.COL.end}\r\n" \
-                   f"{self.COL.green}{resp2[:-2]}{self.COL.end}\r\n"
-        self._queue_list[sys.stdout.fileno()] = bytes(response, "utf-8")
+        # self._queue_list[sys.stdout.fileno()] = resp1 + resp2
+        self._hdl_print(f"[INFO] {self.COL.green}{resp1[:-2].decode('utf-8')}{self.COL.end}")
+        self._hdl_print(f"[INFO] {self.COL.green}{resp2[:-2].decode('utf-8')}{self.COL.end}")
         logging.info("[LGIN] %s %s", resp1, resp2)
         if resp2.find(b"# logresp") >= 0 and resp2.find(b" verified") > 0:
             # put into inputs list once logged in!
@@ -150,16 +150,20 @@ class Ygate2:
         Connect to kiss modem (direwolf)
         :return: True when connect was successful
         """
+        if self.kiss.kiss_fn != 0:
+            self._hdl_print(f"[INFO] {self.COL.yellow}"
+                            f"Kiss modem already connected{self.COL.end}")
+            return True
         if self.kiss.kiss_con():  # open kiss interface socket to direwolf
             self._dispatch_in[self.kiss.kiss_fn] = self._hdl_kiss_rx  # handle kiss input
             self._inputs.append(self.kiss.kiss_fn)
             self._dispatch_out[self.kiss.kiss_fn] = self._hdl_kiss_tx
             name = self.kiss.TCPClient.getpeername()
-            aprs.print_wrap(
-                9 * " " + f"{self.COL.green}Kiss modem connected: {name}{self.COL.end}"
+            self._hdl_print(
+                f"[INFO] {self.COL.green}Kiss modem connected: {name}{self.COL.end}"
             )
             return True
-        print(9 * " " + f"{self.COL.yellow}No kiss modem found{self.COL.end}")
+        self._hdl_print(f"[INFO] {self.COL.yellow}No kiss modem found{self.COL.end}")
         return False
 
     def _serial_con(self) -> bool:
@@ -173,10 +177,7 @@ class Ygate2:
                 baudrate=self.CONFIG["serial"][1],
                 timeout=1
             )  # timeout necessary no to block rest of pgm
-        except (serial.SerialException, serial.SerialTimeoutException) as err:
-            # print(" " * 9 + aprs.t_wrap(f"{self.COL.red}Serial interface: Check connection "
-            #                            f"and driver name. Error {str(err)}{self.COL.end}", 9)
-            #      )
+        except (serial.SerialException, serial.SerialTimeoutException) as err: dev
             logging.warning("[WRN ] %s", str(err))
             return False
         self._ser_fn = self._ser.fileno()
@@ -306,6 +307,9 @@ class Ygate2:
             self._queue_list[self._aprs_fn] = packet
             if self._aprs_fn not in self._outputs:
                 self._outputs.append(self._aprs_fn)
+            logging.debug("msg ack sent: %s", packet)
+            self.packet_parse(packet)
+
         elif ack_a:  # received ack for msg sent
             seq = ack_a.group(1)
             if seq in self._ack_list:
@@ -317,8 +321,6 @@ class Ygate2:
                 self._msg_list[strftime("%Y-%m-%d %H:%M:%S", localtime())] = \
                     ["", f"{seq} acknowledged"]
                 logging.info("[MSG ] Message %s was acknowledged!", seq)
-                self._queue_list[sys.stdout.fileno()] = \
-                    f"[MSG ] {self.COL.purple}Message {seq} acknowledged!{self.COL.end}\r\n"
 
     def _send_my_position(self):
         """
@@ -367,7 +369,7 @@ class Ygate2:
         :param packet: bytes with packet received
         :return:
         """
-        if packet == {}:
+        if packet == b'':
             logging.info("packet_parse: Empty packet")
             return
         p_dec = aprs.packet_parse(packet)
@@ -382,9 +384,9 @@ class Ygate2:
             own = True  # own packet, print in blue
             aprs_str = aprs.packet_prn(p_dec, self.COL.blue)
         else:  # put into list of unique call signs
-            # todo take out ssid
-            if p_dec["source"] not in self.p_stat["calls"]:
-                self.p_stat["calls"].append(p_dec["source"])
+            call = re.match(r"[A-Z0-9]{3,6}", p_dec["source"])
+            if call and call.group() not in self.p_stat["calls"]:
+                self.p_stat["calls"].append(call.group())
         if data_type in ["MSG ", "3PRT"]:
             rec = re.match(r":([0-9A-Z -]{9}):", payload)
             if rec: # check for own call and handle received message
@@ -401,11 +403,9 @@ class Ygate2:
             self.p_stat["not gated"] += 1
             aprs_str = aprs.packet_prn(p_dec, self.COL.yellow)
         logging.debug("[%s] %s", data_type, aprs_str)
-        pck = bytes(f"[{data_type}] {aprs_str}", "utf-8")
-        self._queue_list[sys.stdout.fileno()] = pck
+        self._hdl_print(f"[{data_type}] {aprs_str}\r\n")
         if data_type == "MICE":  # decode MIC_E packets
-            self._queue_list[sys.stdout.fileno()] \
-               += b"\r\n" + bytes(7 * " " + aprs.mic_e_decode(p_dec), "utf-8")
+            self._hdl_print(7 * " " + aprs.mic_e_decode(p_dec))
 
     def prn_hlp(self):
         """
@@ -416,7 +416,6 @@ class Ygate2:
                   f" {self.COL.bold}help:{self.COL.end} This help text\r\n" \
                   f" {self.COL.bold}kiss:{self.COL.end} Connect Kiss modem\r\n" \
                   f" {self.COL.bold}isrx:{self.COL.end} Toggle internet receive on/off\r\n" \
-                  f" {self.COL.bold}pos: {self.COL.end} Send my position\r\n" \
                   f" {self.COL.bold}msg: {self.COL.end} Send message\r\n" \
                   f" {self.COL.bold}que: {self.COL.end} Show message queue\r\n" \
                   f" {self.COL.bold}stat:{self.COL.end} Show statistics\r\n" \
@@ -451,17 +450,22 @@ class Ygate2:
             )[0]
         )
 
+    def prn_msg(self):
+        # todo: function with structured printout
+        print(json.dumps(self._msg_list, indent=4))
+        print(json.dumps(self._ack_list, indent=4, sort_keys=True))
+
     def prn_io(self):
         """
         Print IO status of interfaces
         :return:
         """
-        print(9 * " " +
-              f"I/O: APRS-IS: {self._red_green(self._aprs_fn)}"
-              f" APRS-IS RX: {self._red_green(self.is_rx)}"
-              f" Serial: {self._red_green(self._ser_fn)}"
-              f" KISS: {self._red_green(self.kiss.kiss_fn)}"
-              )
+        self._hdl_print(
+            f"[INFO] I/O: APRS-IS: {self._red_green(self._aprs_fn)}"
+            f" APRS-IS RX: {self._red_green(self.is_rx)}"
+            f" Serial: {self._red_green(self._ser_fn)}"
+            f" KISS: {self._red_green(self.kiss.kiss_fn)}"
+            )
 
     def _red_green(self, var) -> str:
         """
@@ -492,12 +496,11 @@ class Ygate2:
                 del self._queue_list[self._aprs_fn]
             self._inputs.remove(self._aprs_fn)
         logging.info("Internet receive is %s", self.is_rx)
-        # p_prn = f"[INFO] Internet receive is switched {self.red_green(self.is_rx)}."
         self.prn_io()
         if self.kiss.kiss_fn == 0 and self._ser_fn == 0 and not self.is_rx:
-            self._queue_list[sys.stdout.fileno()] \
-               = bytes(f"\r\n{self.COL.red}       No packets can be received, "
-                        f"no radio connected{self.COL.end}", "utf-8")
+            self._hdl_print(
+                f"\r\n{self.COL.red}[WRN ] No packets can be received, "
+                f"no radio connected{self.COL.end}")
 
     def _hdl_kbd(self):
         """
@@ -505,26 +508,17 @@ class Ygate2:
         :return: None
         """
         inv_cmd = bytes(f"{self.COL.red}Invalid keyboard input{self.COL.end}", "utf-8")
-
-        line = sys.stdin.readline()
+        line = sys.stdin.readline().strip()
         if line.startswith("help"):
             self.prn_hlp()
         elif line.startswith("kiss"):
-            if self.kiss.kiss_fn == 0:
-                self._kiss_con()
-            else:
-                print(9 * " " \
-                      + f"{self.COL.yellow}Kiss modem already connected{self.COL.end}")
+            self._kiss_con()
         elif line.startswith("isrx"):
             self._tgl_isrx()
-        elif line.startswith("pos"):
-            self._send_my_position()
         elif line.startswith("msg"):
             self._hdl_msg_input()
         elif line.startswith("que"):
-            # todo: function with structured printout
-            print(json.dumps(self._msg_list, indent=4))
-            print(json.dumps(self._ack_list, indent=4, sort_keys=True))
+            self.prn_msg()
         elif line.startswith("stat"):
             self.prn_stat()
         elif line.startswith("io"):
@@ -534,27 +528,18 @@ class Ygate2:
         else:
             self._queue_list[sys.stdout.fileno()] = inv_cmd
 
-    def _hdl_prn(self):
+    @staticmethod
+    def _hdl_print(text: str):
         """
-        Handler for formatted stdout (print). Adds timestamp
-        and indent output
-        :return: None
+        Handler for formatted stdout (print). Adds timestamp and indents output
+        :param b_txt:
+        :return:
         """
-        if not self._queue_list or sys.stdout.fileno() not in self._queue_list:
-            return
-        try:
-            b_txt = self._queue_list[sys.stdout.fileno()]
-        except KeyError:
-            # todo: check, whether exception is really necessary
-            logging.debug("KeyError in hdl_prn %s", self._queue_list)
-            return
-        text = aprs.decode_ascii(b_txt)
-        lines = text[1].split("\r\n")
+        lines = text.split("\r\n")
         for line in lines:
             if len(line) > 0:
                 t_out = time.strftime("%H:%M:%S ") + aprs.t_wrap(line, aprs.INDENT)
                 sys.stdout.write(t_out)
-        del self._queue_list[sys.stdout.fileno()]  # delete from queue
 
     def _hdl_timeout(self):
         """
@@ -564,7 +549,6 @@ class Ygate2:
         """
         retry = 120.  # wait 2 min before trying to reconnect
         logging.warning("[TOUT] timeout or start login - fn: %s", self._aprs_fn)
-        # todo remove fn
         if aprs.is_internet():
             if self._aprs_con():
                 self._send_my_position()
@@ -584,9 +568,9 @@ class Ygate2:
             buf = self._client.recv(self._BUF)
             logging.debug("APRS buf: %s", buf)
         except (TimeoutError, OSError) as err:
-            self._queue_list[sys.stdout.fileno()] = \
-                bytes(f"{self.COL.yellow}Error reading from APRS-IS{self.COL.end}:"
-                      f" {err}\r\n", "utf-8")
+            self._hdl_print(
+                f"{self.COL.yellow}Error reading from APRS-IS{self.COL.end}:"
+                f" {err}\r\n")
             self._hdl_timeout()  # try to reconnect
             return
         if buf.startswith(b"#"):  # disregard aprs-is comments
@@ -604,9 +588,8 @@ class Ygate2:
         try:
             self._client.sendall(b_to_send)
         except (TimeoutError, BrokenPipeError, OSError) as err:
-            # todo: error handling
-            print(f"{self.COL.yellow}Error writing to APRS-IS"
-                  f"{self.COL.end}: {err}", "utf-8")
+            self._hdl_print(f"[ERR ] {self.COL.yellow}"
+                            f"Error writing to APRS-IS{self.COL.end}: {err}")
             self._hdl_timeout()  # try to reconnect
         logging.info("[TX  ] %s", b_to_send)
         del self._queue_list[self._aprs_fn]  # delete from queue
@@ -661,9 +644,10 @@ class Ygate2:
             self._inputs.remove(self.kiss.kiss_fn)
             self.kiss.TCPClient.close()
             self.kiss.kiss_fn = 0
-            logging.info("[WRN ] Kiss modem disconnected")
-            self._queue_list[sys.stdout.fileno()] = \
-                bytes(f"[WRN ] {self.COL.yellow}Kiss modem disconnected{self.COL.end}", "utf-8")
+            logging.info("[INFO] Kiss modem disconnected")
+            self._hdl_print(
+                f"[INFO] {self.COL.yellow}Kiss modem disconnected{self.COL.end}"
+            )
             return
         logging.info("[KISS] %s", packet)
         self.packet_parse(packet)
@@ -703,14 +687,14 @@ class Ygate2:
         print(" " * 9 + f"Compressed Position: {pos_c}")
         logging.info("Ygate program started, version %s", self._VERS)
 
-        self.prn_hlp()
         self._dispatch_in[sys.stdin.fileno()] = self._hdl_kbd  # handle keyboard input
-        self._dispatch_out[sys.stdout.fileno()] = self._hdl_prn  # handle print output
 
+        self.prn_hlp()
         self._serial_con()  # open serial
         self._kiss_con()  # open kiss modem
         self._hdl_timeout()  # open socket and connect to aprs server
         self.prn_io()
+        time.sleep(5.)
         self._send_status()
 
     def main(self):

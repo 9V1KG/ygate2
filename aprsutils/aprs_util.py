@@ -304,19 +304,6 @@ def decode_ascii(b_str: bytes) -> tuple:
             b_str = b_str[msg.end:]
     return inv_byt, str_dec
 
-
-def print_wrap(text: str):
-    """
-    Prints text wrapped and indented
-    :param text: input string
-    :return:
-    """
-    lines = textwrap.wrap(text, WRAP)
-    print(lines.pop(0))
-    for line in lines:
-        print(textwrap.indent(line, 16 * " "))
-
-
 def t_wrap(text: str, indent: int) -> str:
     """
     Formatting text wrapped and indented
@@ -415,14 +402,16 @@ def packet_prn(pck: dict, col: str = "") -> str:
     :param col: color for info
     :return: printable string
     """
-    inv_byt, pld = decode_ascii(pck['payload'][1:])
+    inv_byt, pld = decode_ascii(pck['payload'])
     prn = col
     info = pck["info"]
     if info != "":
         prn += col
         prn += f"{info}: "
     prn += f"{pck['source']}>{pck['dest']}," \
-           f"{','.join(pck['path'])}:{pck['dta_id']}{pld}\033[1;37;0m"
+           f"{','.join(pck['path'])}:{pld}"
+    if col != "":
+        prn += "\033[1;37;0m"
     return prn
 
 
