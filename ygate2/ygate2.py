@@ -177,7 +177,7 @@ class Ygate2:
                 baudrate=self.CONFIG["serial"][1],
                 timeout=1
             )  # timeout necessary no to block rest of pgm
-        except (serial.SerialException, serial.SerialTimeoutException) as err: dev
+        except (serial.SerialException, serial.SerialTimeoutException) as err:
             logging.warning("[WRN ] %s", str(err))
             return False
         self._ser_fn = self._ser.fileno()
